@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class BookingScreen extends StatelessWidget {
-  const BookingScreen({super.key});
+class MyBookingsScreen extends StatelessWidget {
+  const MyBookingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

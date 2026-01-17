@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:parkwise/features/home/screens/placeholder_screens.dart';
+import 'package:parkwise/features/home/widgets/parking_details_popup.dart';
+import 'package:parkwise/features/parking/models/parking_spot.dart';
+import 'package:parkwise/features/parking/services/parking_firestore_service.dart';
 import 'package:parkwise/features/home/screens/profile_screen.dart';
-import 'package:parkwise/features/home/widgets/notification_popup.dart';
+import 'package:parkwise/features/parking/screens/bookings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,199 +15,20 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  int _selectedVehicleIndex = -1; // No vehicle selected by default
+  final ParkingFirestoreService _parkingService = ParkingFirestoreService();
 
-  static const List<Widget> _pages = <Widget>[
-    _HomeTabContent(), // Extracted widget for Home Tab
-    BookingScreen(),
-    NavigationScreen(),
-    ProfileScreen(),
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: _selectedIndex == 0,
-      onPopInvoked: (didPop) {
-        if (didPop) return;
-        setState(() {
-          _selectedIndex = 0;
-        });
-      },
-      child: Scaffold(
-        // appBar: removed as requested
-        backgroundColor: Colors.white, // Uniform background
-        extendBody: true,
-        extendBodyBehindAppBar: true,
-        body: _pages.elementAt(_selectedIndex),
-        bottomNavigationBar: SafeArea(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(100),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final double itemWidth = constraints.maxWidth / 4;
-                return SizedBox(
-                  height: 80, // Fixed height for the bar
-                  child: Stack(
-                    children: [
-                      // Sliding Green Indicator
-                      AnimatedPositioned(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOutBack,
-                        top: 5,
-                        left: _selectedIndex * itemWidth + 5,
-                        width: itemWidth - 10,
-                        height: 70,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: const Color.fromARGB(255, 69, 255, 66),
-                            borderRadius: BorderRadius.circular(100),
-                          ),
-                        ),
-                      ),
-                      // Navigation Items
-                      Row(
-                        children: [
-                          _buildNavItem(
-                            0,
-                            Icons.home_rounded,
-                            Icons.home_outlined,
-                            'Home',
-                            itemWidth,
-                          ),
-                          _buildNavItem(
-                            1,
-                            Icons.calendar_month_rounded,
-                            Icons.calendar_month_outlined,
-                            'Booking',
-                            itemWidth,
-                          ),
-                          _buildNavItem(
-                            2,
-                            Icons.near_me_rounded,
-                            Icons.near_me_outlined,
-                            'Nav',
-                            itemWidth,
-                          ),
-                          _buildNavItem(
-                            3,
-                            Icons.person_rounded,
-                            Icons.person_outline,
-                            'Profile',
-                            itemWidth,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    int index,
-    IconData activeIcon,
-    IconData inactiveIcon,
-    String label,
-    double width,
-  ) {
-    bool isSelected = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () => _onItemTapped(index),
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: width,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Icon
-            Icon(
-              isSelected ? activeIcon : inactiveIcon,
-              color: isSelected ? Colors.black : Colors.grey.shade400,
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            // Text Label
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 200),
-              style: GoogleFonts.outfit(
-                color: isSelected ? Colors.black : Colors.grey.shade400,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                fontSize: 12,
-              ),
-              child: Text(label),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HomeTabContent extends StatefulWidget {
-  const _HomeTabContent();
-
-  @override
-  State<_HomeTabContent> createState() => _HomeTabContentState();
-}
-
-class _HomeTabContentState extends State<_HomeTabContent> {
-  bool _isExpanded = false;
-  bool _isNotificationOpen = false;
+  // Search Expand State
+  bool _isSearchExpanded = false;
   final TextEditingController _searchController = TextEditingController();
 
-  int _selectedVehicleIndex = -1;
-  final List<Map<String, String>> _vehicleTypes = [
-    {'name': 'Hatchback', 'icon': 'assets/images/hatchback_icon.jpg'},
-    {'name': 'SUV', 'icon': 'assets/images/suv_icon.png'},
-    {'name': 'Sedan', 'icon': 'assets/images/sedan_icon.jpg'},
-    {'name': 'EV', 'icon': 'assets/images/ev_icon.jpg'},
-    {'name': 'Bike', 'icon': 'assets/images/bike_icon.jpg'},
-  ];
-
-  final List<Map<String, dynamic>> _parkingSpots = [
-    {
-      'name': 'Grand Mall Parking',
-      'address': '123 Main St, Central City',
-      'price': '\$5/hr',
-      'rating': 4.5,
-      'image': 'assets/images/parking_aerial.jpg',
-    },
-    {
-      'name': 'City Center Garage',
-      'address': '456 Market St, Downtown',
-      'price': '\$4/hr',
-      'rating': 4.2,
-      'image': 'assets/images/parking_login.jpg',
-    },
-    {
-      'name': 'Airport Terminal 1',
-      'address': '789 Airport Rd, Westside',
-      'price': '\$8/hr',
-      'rating': 4.8,
-      'image': 'assets/images/parking_aerial.jpg',
-    },
+  // Vehicle Categories
+  final List<Map<String, dynamic>> _vehicleCategories = [
+    {'name': 'Hatchback', 'image': 'assets/images/hatchback_icon.jpg'},
+    {'name': 'SUV', 'image': 'assets/images/suv_icon.png'},
+    {'name': 'Sedan', 'image': 'assets/images/sedan_icon.jpg'},
+    {'name': 'EV', 'image': 'assets/images/ev_icon.jpg'},
+    {'name': 'Bike', 'image': 'assets/images/bike_icon.jpg'},
   ];
 
   @override
@@ -214,427 +37,586 @@ class _HomeTabContentState extends State<_HomeTabContent> {
     super.dispose();
   }
 
-  void _toggleSearch() {
-    setState(() {
-      _isExpanded = !_isExpanded;
-      if (!_isExpanded) {
-        _searchController.clear();
-        FocusScope.of(context).unfocus(); // Close keyboard on collapse
-      }
-    });
-  }
-
-  void _toggleNotifications() {
-    setState(() {
-      _isNotificationOpen = !_isNotificationOpen;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Map Placeholder Background
-        Container(color: Colors.grey.shade50),
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50, // Light grey background
+      body: Stack(
+        children: [
+          // Main Content
+          IndexedStack(
+            index: _selectedIndex,
+            children: [
+              _buildHomeContent(),
+              const BookingsScreen(),
+              const Center(child: Text("Nav Placeholder")), // Placeholder
+              const ProfileScreen(),
+            ],
+          ),
 
-        // Content Overlay
-        SafeArea(
-          bottom: false,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 120),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16), // Padding from top safe area
-                // Search and Notification Buttons Row
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Animated Search Bar
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 450),
-                        curve: Curves.easeInOutCubic,
-                        // Logic: If expanded, take 70% of screen. If collapsed, only 50px circle.
-                        width: _isExpanded
-                            ? MediaQuery.of(context).size.width * 0.70
-                            : 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(
-                            30,
-                          ), // Pill shape when expanded, Circle when collapsed
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            if (_isExpanded)
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.only(left: 16.0),
-                                  child: TextField(
-                                    controller: _searchController,
-                                    cursorColor: Colors.black,
-                                    decoration: InputDecoration(
-                                      hintText: 'Search parking...',
-                                      hintStyle: GoogleFonts.outfit(
-                                        color: Colors.grey.shade400,
-                                        fontSize: 14,
-                                      ),
-                                      border: InputBorder.none,
-                                      focusedBorder: InputBorder.none,
-                                      enabledBorder: InputBorder.none,
-                                      errorBorder: InputBorder.none,
-                                      disabledBorder: InputBorder.none,
-                                      isDense: true,
-                                      contentPadding: EdgeInsets.zero,
-                                    ),
-                                    style: GoogleFonts.outfit(
-                                      color: Colors.black,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            // Search Icon (Acts as Toggle with Rolling Animation)
-                            Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: _toggleSearch,
-                                borderRadius: BorderRadius.circular(30),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12.0),
-                                  child: AnimatedRotation(
-                                    turns: _isExpanded ? 1.0 : 0.0,
-                                    duration: const Duration(milliseconds: 450),
-                                    curve: Curves.easeInOutCubic,
-                                    child: const Icon(
-                                      Icons.search,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+          // Floating Bottom Navigation
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 24,
+            child: _buildFloatingBottomNav(),
+          ),
+        ],
+      ),
+    );
+  }
 
-                      // Notification Button
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
+  Widget _buildHomeContent() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(left: 24, right: 24, top: 60, bottom: 100),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: Search & Notification
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Expandable Search Bar
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeInOut,
+                width: _isSearchExpanded
+                    ? MediaQuery.of(context).size.width - 48 - 60
+                    : 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(25),
+                  // Removed shadow/border completely as requested ("remove the border higlighting where to park / remove that")
+                ),
+                child: Stack(
+                  children: [
+                    // Text Field
+                    if (_isSearchExpanded)
+                      Positioned.fill(
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 16, right: 50),
+                          child: Center(
+                            child: TextField(
+                              controller: _searchController,
+                              autofocus: false,
+                              decoration: InputDecoration(
+                                hintText: 'Where to park ??', // Updated hint
+                                hintStyle: GoogleFonts.outfit(
+                                  color: Colors.grey,
+                                ),
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                                isDense: true,
+                              ),
+                              style: GoogleFonts.outfit(color: Colors.black87),
+                              onSubmitted: (value) {
+                                // Add search logic here if needed
+                              },
                             ),
-                          ],
-                        ),
-                        child: IconButton(
-                          onPressed: _toggleNotifications,
-                          icon: const Icon(
-                            Icons.notifications_outlined,
-                            color: Colors.black,
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // Choose Vehicle Section
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Choose Vehicle',
-                        style: GoogleFonts.outfit(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        height: 90, // Reduced height
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _vehicleTypes.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(width: 12),
-                          itemBuilder: (context, index) {
-                            bool isSelected = _selectedVehicleIndex == index;
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedVehicleIndex = index;
-                                });
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ), // Reduced padding
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? const Color.fromARGB(255, 69, 255, 66)
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(
-                                    12,
-                                  ), // Reduced radius
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                  border: isSelected
-                                      ? null
-                                      : Border.all(color: Colors.grey.shade200),
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      width: 50, // Reduced width
-                                      height: 30, // Reduced height
-                                      decoration: BoxDecoration(
-                                        image: DecorationImage(
-                                          image: AssetImage(
-                                            _vehicleTypes[index]['icon']!,
-                                          ),
-                                          fit: BoxFit.contain,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      _vehicleTypes[index]['name']!,
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 12, // Reduced font size
-                                        fontWeight: isSelected
-                                            ? FontWeight.bold
-                                            : FontWeight.w500,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ],
+
+                    // Rolling Search Icon
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOut,
+                      left: _isSearchExpanded
+                          ? (MediaQuery.of(context).size.width - 48 - 60) -
+                                50 // Move to right end
+                          : 0, // Keep at left
+                      top: 0,
+                      bottom: 0,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isSearchExpanded = !_isSearchExpanded;
+                            if (!_isSearchExpanded) {
+                              _searchController.clear();
+                              FocusScope.of(context).unfocus();
+                            }
+                          });
+                        },
+                        child: TweenAnimationBuilder(
+                          tween: Tween<double>(
+                            begin: 0,
+                            end: _isSearchExpanded ? 1 : 0,
+                          ),
+                          duration: const Duration(milliseconds: 400),
+                          builder: (context, double value, child) {
+                            return Transform.rotate(
+                              angle: value * 2 * 3.14159, // Full rotation (2pi)
+                              child: Container(
+                                width: 50,
+                                height: 50,
+                                alignment: Alignment.center,
+                                child: const Icon(
+                                  Icons.search,
+                                  color: Colors.black87,
                                 ),
                               ),
                             );
                           },
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                // Parking Spot Section
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Parking Spot',
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {},
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text(
-                              'See All',
-                              style: GoogleFonts.outfit(
-                                fontSize: 14,
-                                color: const Color.fromARGB(255, 69, 255, 66),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const SizedBox(height: 16),
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _parkingSpots.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: 16),
-                        itemBuilder: (context, index) {
-                          final spot = _parkingSpots[index];
-                          return Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Image
-                                Container(
-                                  height:
-                                      150, // Slightly taller for vertical view
-                                  decoration: BoxDecoration(
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(20),
-                                    ),
-                                    image: DecorationImage(
-                                      image: AssetImage(spot['image']),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              spot['name'],
-                                              style: GoogleFonts.outfit(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: const Color.fromARGB(
-                                                20,
-                                                69,
-                                                255,
-                                                66,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              spot['price'],
-                                              style: GoogleFonts.outfit(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.bold,
-                                                color: const Color.fromARGB(
-                                                  255,
-                                                  0,
-                                                  180,
-                                                  0,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        spot['address'],
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 14,
-                                          color: Colors.grey.shade500,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.star_rounded,
-                                            color: Colors.amber,
-                                            size: 18,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            spot['rating'].toString(),
-                                            style: GoogleFonts.outfit(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          Icon(
-                                            Icons.access_time_rounded,
-                                            color: Colors.grey.shade400,
-                                            size: 16,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'Open 24/7',
-                                            style: GoogleFonts.outfit(
-                                              fontSize: 12,
-                                              color: Colors.grey.shade500,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
+
+              _buildHeaderButton(Icons.notifications_outlined),
+            ],
+          ),
+          const SizedBox(height: 32),
+
+          // "Choose Vehicle" Section
+          Text(
+            'Choose Vehicle',
+            style: GoogleFonts.outfit(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF0F172A), // Dark text color
             ),
           ),
-        ),
+          const SizedBox(height: 16),
+          // Horizontal scrolling for vehicles if needed, or row
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _vehicleCategories.asMap().entries.map((entry) {
+                final index = entry.key;
+                final category = entry.value;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: _buildVehicleCard(
+                    index,
+                    category['name'],
+                    category['image'],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
 
-        // Notification Overlay
-        NotificationPopup(
-          isOpen: _isNotificationOpen,
-          onToggle: _toggleNotifications,
+          const SizedBox(height: 32),
+
+          // "Parking Spot" Section
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Parking Spot',
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
+              GestureDetector(
+                onTap: _showAllSpots,
+                child: Text(
+                  'See All',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(
+                      0xFF4ADE80,
+                    ), // Light Green - reference color
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Parking List
+          StreamBuilder<List<ParkingSpot>>(
+            stream: _parkingService.getParkingSpots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Text("Error: ${snapshot.error}");
+              }
+
+              final parkings = snapshot.data ?? [];
+              // Use first 3 for home screen
+              final displayParkings = parkings.take(3).toList();
+
+              return ListView.separated(
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: displayParkings.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 20),
+                itemBuilder: (context, index) {
+                  return _buildParkingCard(displayParkings[index]);
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAllSpots() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.grey.shade50,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) {
+          return Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 16),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(
+                  'Other Parking Spots',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: StreamBuilder<List<ParkingSpot>>(
+                  stream: _parkingService.getParkingSpots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData)
+                      return const Center(child: CircularProgressIndicator());
+                    final parkings = snapshot.data!;
+                    // Filter out the first 3 that are shown on home screen
+                    final otherParkings = parkings.skip(3).toList();
+
+                    if (otherParkings.isEmpty) {
+                      return Center(
+                        child: Text(
+                          "No more spots available",
+                          style: GoogleFonts.outfit(color: Colors.grey),
+                        ),
+                      );
+                    }
+
+                    return ListView.separated(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      itemCount: otherParkings.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 20),
+                      itemBuilder: (context, index) =>
+                          _buildParkingCard(otherParkings[index]),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHeaderButton(IconData icon) {
+    return Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        // Removed shadow to match requested simpler search look, or kept minimal if user only complained about search border?
+        // User said "remove the border higlighting where to park", specific to search.
+        // I'll keep button shadow as it gives depth, unless user complains.
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Icon(icon, color: Colors.black87),
+    );
+  }
+
+  Widget _buildVehicleCard(int index, String name, String imagePath) {
+    bool isSelected = _selectedVehicleIndex == index;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (_selectedVehicleIndex == index) {
+            _selectedVehicleIndex = -1; // Deselect if tapped again
+          } else {
+            _selectedVehicleIndex = index;
+          }
+        });
+      },
+      child: Column(
+        children: [
+          Container(
+            width: 75,
+            height: 75,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              // User: "highlighting part in bottom nav should match the colour with see all" (Light Green)
+              // User: "user should select the choose vehicle and the highlighiting part in the same colour as see all"
+              color: isSelected ? const Color(0xFF4ADE80) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: isSelected
+                  ? []
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+            ),
+            child: Image.asset(
+              imagePath,
+              fit: BoxFit.contain,
+              // Ideally change icon color if background is green (to white/black?), but images are assets.
+              // Assuming they look okay on green.
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            name,
+            style: GoogleFonts.outfit(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildParkingCard(ParkingSpot parking) {
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => ParkingDetailsPopup(parking: parking),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
         ),
-      ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image Section
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+              child: Image.asset(
+                'assets/images/parking_aerial.jpg', // Or parking.imageUrl if valid
+                height: 150,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title row (Price removed as requested)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          parking.name,
+                          style: GoogleFonts.outfit(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF0F172A),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+
+                  // Address
+                  Text(
+                    parking.address,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      color: Colors.grey.shade400,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Rating and Open Status
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 18),
+                      const SizedBox(width: 4),
+                      Text(
+                        parking.rating.toString(),
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Icon(
+                        Icons.access_time,
+                        color: Colors.grey.shade400,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 4),
+                      // Display Time from DB
+                      Text(
+                        '${parking.openTime} - ${parking.closeTime}',
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          color: Colors.grey.shade400,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (parking.isOpen)
+                        Text(
+                          'OPEN', // "if parking is open then write OPEN in green same as see all"
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF4ADE80), // Light Green
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFloatingBottomNav() {
+    return Container(
+      padding: const EdgeInsets.all(8), // Reduced padding for pill shape
+      decoration: BoxDecoration(
+        color: Colors.white, // "bottom nav colour should be white along"
+        borderRadius: BorderRadius.circular(40),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(
+              0.1,
+            ), // Adjusted shadow for white bg
+            blurRadius: 20,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround, // Even spacing
+        children: [
+          _buildNavItem(0, Icons.home_rounded, 'Home'),
+          _buildNavItem(1, Icons.calendar_today_rounded, 'Booking'),
+          _buildNavItem(2, Icons.near_me_outlined, 'Nav'),
+          _buildNavItem(3, Icons.person_outline, 'Profile'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, String label) {
+    final bool isSelected = _selectedIndex == index;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() => _selectedIndex = index);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: isSelected
+            ? const EdgeInsets.symmetric(horizontal: 16, vertical: 12)
+            : const EdgeInsets.all(12),
+        decoration: isSelected
+            ? const BoxDecoration(
+                // "highlighting part in bottom nav should match the colour with see all" (Light Green)
+                color: Color(0xFF4ADE80),
+                shape: BoxShape.circle,
+              )
+            : null,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              // Icon color dark on white bg or green bg
+              color: isSelected ? Colors.black : Colors.grey.shade400,
+              size: 24,
+            ),
+            // Show text ONLY if selected (implied by "in highlighted paRT icon n text both will come")
+            // and unselected usually just icons in this style.
+            if (isSelected) ...[
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: GoogleFonts.outfit(
+                  fontSize: 10, // Small text inside circle
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 2),
+              // Small dot indicator as seen in image
+              Container(
+                width: 4,
+                height: 4,
+                decoration: const BoxDecoration(
+                  color: Colors.black,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
