@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:parkwise/features/parking/models/parking_spot.dart';
-import 'package:parkwise/features/parking/widgets/circular_duration_slider.dart';
-import 'package:parkwise/features/parking/widgets/vehicle_details_popup.dart';
-import 'package:parkwise/features/parking/screens/booking_summary_screen.dart';
+
+import 'package:parkwise/features/parking/screens/booking_screen.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+// ... (existing imports)
 
 class ParkingDetailsPopup extends StatefulWidget {
   final ParkingSpot parking;
+  final String? initialVehicleType;
 
-  const ParkingDetailsPopup({super.key, required this.parking});
+  const ParkingDetailsPopup({
+    super.key,
+    required this.parking,
+    this.initialVehicleType,
+  });
 
   @override
   State<ParkingDetailsPopup> createState() => _ParkingDetailsPopupState();
@@ -16,454 +24,363 @@ class ParkingDetailsPopup extends StatefulWidget {
 
 class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
   String? _selectedVehicleKey;
-
-  // Slider Integration State
-  double _duration = 1.0;
-  int _daySelectionIndex = 0;
-  final DateTime _selectedDate = DateTime.now();
+  late Stream<DocumentSnapshot> _parkingStream;
 
   @override
   void initState() {
     super.initState();
-    // Default selection removed as requested
+    // Auto-select if provided and valid
+    if (widget.initialVehicleType != null &&
+        widget.parking.vehicles.containsKey(widget.initialVehicleType)) {
+      _selectedVehicleKey = widget.initialVehicleType;
+    }
+
+    // Listen to real-time updates for this parking spot
+    _parkingStream = FirebaseFirestore.instance
+        .collection('parkings')
+        .doc(widget.parking.id)
+        .snapshots();
   }
 
   @override
   Widget build(BuildContext context) {
-    final vehicles = widget.parking.vehicles;
+    return StreamBuilder<DocumentSnapshot>(
+      stream: _parkingStream,
+      builder: (context, snapshot) {
+        ParkingSpot displayParking = widget.parking;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header Image
-          Stack(
-            children: [
-              Container(
-                height: 200,
-                width: double.infinity,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                  child: Image.asset(
-                    'assets/images/parking_aerial.jpg', // Placeholder since parking.imageUrl might be invalid URL on emulator.
-                    // In real app use: widget.parking.imageUrl.startsWith('http') ? NetworkImage(...) : AssetImage(...)
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              // Close Button
-              Positioned(
-                top: 16,
-                right: 16,
-                child: GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close, size: 20),
-                  ),
-                ),
-              ),
-            ],
+        if (snapshot.hasData && snapshot.data!.exists) {
+          try {
+            // Update the parking object with new data
+            displayParking = ParkingSpot.fromFirestore(snapshot.data!);
+          } catch (e) {
+            print('Error parsing real-time update: $e');
+            // Fallback to widget.parking
+          }
+        }
+
+        final vehicles = displayParking.vehicles;
+
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.85,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
           ),
-
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header Image
+              Stack(
                 children: [
-                  // Title & Rating
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Container(
+                    height: 200,
+                    width: double.infinity,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                      child: Image.asset(
+                        'assets/images/parking_aerial.jpg', // Placeholder
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  // Close Button
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.close, size: 20),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          widget.parking.name,
-                          style: GoogleFonts.outfit(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.star,
-                              size: 16,
-                              color: Colors.green,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              widget.parking.rating.toString(),
+                      // Title & Rating
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              displayParking.name,
                               style: GoogleFonts.outfit(
+                                fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.green.shade700,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.parking.address,
-                    style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Facilities
-                  Text(
-                    'Facilities',
-                    style: GoogleFonts.outfit(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: widget.parking.facilities.split(',').map((f) {
-                      final facility = f.trim();
-                      if (facility.isEmpty) return const SizedBox.shrink();
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          facility,
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
                           ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Vehicle Selection
-                  Text(
-                    'Choose Vehicle Type',
-                    style: GoogleFonts.outfit(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  if (vehicles.isEmpty)
-                    Text(
-                      'No pricing info available',
-                      style: GoogleFonts.outfit(color: Colors.grey),
-                    ),
-
-                  // Filter out vehicles with 0 slots
-                  ...vehicles.entries.where((e) => e.value.slots > 0).map((
-                    entry,
-                  ) {
-                    final type = entry.key;
-                    final data = entry.value;
-                    final isSelected = _selectedVehicleKey == type;
-
-                    // "if user selects vehicle then green colour appears"
-                    final activeColor = const Color(0xFF4ADE80);
-
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          if (_selectedVehicleKey == type) {
-                            _selectedVehicleKey = null;
-                          } else {
-                            _selectedVehicleKey = type;
-                            // Force rebuild of slider state via Key
-                          }
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves
-                            .easeInOut, // "make rest of txt visible in ease"
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 16,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected ? activeColor : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isSelected
-                                ? activeColor
-                                : Colors.grey.shade200,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // 1. Vehicle Type (Left)
-                            Expanded(
-                              flex: 3,
-                              child: Text(
-                                type.toUpperCase(),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.outfit(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: Colors.black, // Always black
-                                ),
-                              ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
                             ),
-
-                            // 2. Number of Slots (Middle)
-                            Expanded(
-                              flex: 4,
-                              child: Center(
-                                child: RichText(
-                                  text: TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text: '${data.slots} ',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: isSelected
-                                              ? Colors.black
-                                              : const Color(
-                                                  0xFF16A34A,
-                                                ), // Dynamic color
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text: 'slots',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 14,
-                                          color: Colors.black54,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(8),
                             ),
-
-                            // 3. Price (Right)
-                            Expanded(
-                              flex: 3,
-                              child: Align(
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  '\u20B9${data.price}/hr',
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.star,
+                                  size: 16,
+                                  color: Colors.green,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  displayParking.rating.toString(),
                                   style: GoogleFonts.outfit(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                    color: Colors.black,
+                                    color: Colors.green.shade700,
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        displayParking.address,
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          color: Colors.grey,
                         ),
                       ),
-                    );
-                  }).toList(),
 
-                  // ------------------------
-                  // DURATION SLIDER SECTION
-                  // ------------------------
-                  if (_selectedVehicleKey != null) ...[
-                    const SizedBox(height: 24),
-                    const Divider(),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    // Start Time Selector
-                    Text(
-                      'Start Time',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        _buildDateChip('Today', 0),
-                        const SizedBox(width: 12),
-                        _buildDateChip('Tomorrow', 1),
-                        const SizedBox(width: 12),
-                        _buildDateChip('Later', 2),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Duration Heading
-                    Center(
-                      child: Text(
-                        'Duration',
+                      // Facilities
+                      Text(
+                        'Facilities',
                         style: GoogleFonts.outfit(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Circular Slider
-                    Center(
-                      child: CircularDurationSlider(
-                        value: _duration,
-                        min: 0,
-                        max: 12,
-                        onChanged: (val) => setState(() => _duration = val),
-                        activeColor: const Color(0xFF4ADE80),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Total Price
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Total Price',
-                          style: GoogleFonts.outfit(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          '\u20B9${(widget.parking.vehicles[_selectedVehicleKey]!.price * _duration).toStringAsFixed(0)}',
-                          style: GoogleFonts.outfit(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF16A34A),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-
-                  const SizedBox(height: 80), // Space for bottom slider
-                ],
-              ),
-            ),
-          ),
-
-          // Slide Action Button (Show only if vehicle selected)
-          if (_selectedVehicleKey != null)
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 20,
-                    offset: const Offset(0, -5),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                child: _SlideToBookButton(
-                  key: ValueKey(_selectedVehicleKey),
-                  onSlideCompleted: () async {
-                    final type = _selectedVehicleKey!;
-                    final data = widget.parking.vehicles[type]!;
-
-                    // Show Vehicle Details Dialog
-                    await showDialog(
-                      context: context,
-                      builder: (context) => VehicleDetailsDialog(
-                        vehicleType: type,
-                        onProceed: (model, plate) {
-                          Navigator.pop(context); // Close Dialog
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => BookingSummaryScreen(
-                                spot: widget.parking,
-                                slotId: -1,
-                                startTime: _selectedDate,
-                                duration: _duration,
-                                totalPrice: data.price * _duration,
-                                vehicleModel: model,
-                                licensePlate: plate,
-                                hourlyRate: data.price,
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: displayParking.facilities.split(',').map((f) {
+                          final facility = f.trim();
+                          if (facility.isEmpty) return const SizedBox.shrink();
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              facility,
+                              style: GoogleFonts.outfit(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           );
-                        },
+                        }).toList(),
                       ),
-                    );
-                  },
+
+                      const SizedBox(height: 32),
+
+                      // Vehicle Selection
+                      Text(
+                        'Choose Vehicle Type',
+                        style: GoogleFonts.outfit(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      if (vehicles.isEmpty)
+                        Text(
+                          'No pricing info available',
+                          style: GoogleFonts.outfit(color: Colors.grey),
+                        ),
+
+                      // Filter out vehicles with 0 slots
+                      ...vehicles.entries.where((e) => e.value.slots > 0).map((
+                        entry,
+                      ) {
+                        final type = entry.key;
+                        final data = entry.value;
+                        final isSelected = _selectedVehicleKey == type;
+
+                        // "if user selects vehicle then green colour appears"
+                        final activeColor = const Color(0xFF4ADE80);
+
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (_selectedVehicleKey == type) {
+                                _selectedVehicleKey = null;
+                              } else {
+                                _selectedVehicleKey = type;
+                                // Force rebuild of slider state via Key
+                              }
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves
+                                .easeInOut, // "make rest of txt visible in ease"
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 16,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected ? activeColor : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isSelected
+                                    ? activeColor
+                                    : Colors.grey.shade200,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // 1. Vehicle Type (Left)
+                                Expanded(
+                                  flex: 3,
+                                  child: Text(
+                                    type.toUpperCase(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: Colors.black, // Always black
+                                    ),
+                                  ),
+                                ),
+
+                                // 2. Number of Slots (Middle)
+                                Expanded(
+                                  flex: 4,
+                                  child: Center(
+                                    child: RichText(
+                                      text: TextSpan(
+                                        children: [
+                                          TextSpan(
+                                            text: '${data.slots} ',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: isSelected
+                                                  ? Colors.black
+                                                  : const Color(
+                                                      0xFF16A34A,
+                                                    ), // Dynamic color
+                                            ),
+                                          ),
+                                          TextSpan(
+                                            text: 'slots',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 14,
+                                              color: Colors.black54,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                // 3. Price (Right)
+                                Expanded(
+                                  flex: 3,
+                                  child: Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Text(
+                                      '\u20B9${data.price}/hr',
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+
+                      const SizedBox(height: 80), // Space for bottom slider
+                    ],
+                  ),
                 ),
               ),
-            ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildDateChip(String label, int index) {
-    bool isSelected = _daySelectionIndex == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _daySelectionIndex = index),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFE8F5E9) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected
-                  ? const Color(0xFF4ADE80)
-                  : Colors.grey.shade200,
-            ),
+              // Slide Action Button (Show only if vehicle selected)
+              if (_selectedVehicleKey != null &&
+                  vehicles.containsKey(_selectedVehicleKey) &&
+                  vehicles[_selectedVehicleKey]!.slots > 0)
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 20,
+                        offset: const Offset(0, -5),
+                      ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    child: _SlideToBookButton(
+                      key: ValueKey(_selectedVehicleKey),
+                      onSlideCompleted: () {
+                        final type = _selectedVehicleKey!;
+                        final data = vehicles[type]!;
+
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => BookingScreen(
+                              spot: displayParking,
+                              vehicleType: type,
+                              pricePerHour: data.price,
+                              availableSlots: data.slots,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+            ],
           ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: GoogleFonts.outfit(
-              color: isSelected ? const Color(0xFF16A34A) : Colors.black54,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

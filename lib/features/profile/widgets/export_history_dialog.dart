@@ -5,7 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:parkwise/features/profile/services/booking_firestore_service.dart';
+import 'package:parkwise/features/parking/services/booking_firestore_service.dart';
+import 'package:parkwise/features/parking/services/local_booking_service.dart';
+import 'package:parkwise/features/parking/models/booking_model.dart';
 
 class ExportHistoryDialog extends StatefulWidget {
   const ExportHistoryDialog({super.key});
@@ -20,11 +22,11 @@ class _ExportHistoryDialogState extends State<ExportHistoryDialog> {
   final DateTime _today = DateTime.now();
   bool _isExporting = false;
   final BookingFirestoreService _bookingService = BookingFirestoreService();
+  final LocalBookingService _localBookingService = LocalBookingService();
 
   @override
   void initState() {
     super.initState();
-    // Default range: Account creation -> Today
     final user = FirebaseAuth.instance.currentUser;
     _startDate = user?.metadata.creationTime ?? DateTime(2024);
     _endDate = _today;
@@ -42,7 +44,7 @@ class _ExportHistoryDialogState extends State<ExportHistoryDialog> {
       builder: (context, child) {
         return Theme(
           data: ThemeData.light().copyWith(
-            colorScheme: ColorScheme.light(
+            colorScheme: const ColorScheme.light(
               primary: Colors.black,
               onPrimary: Colors.white,
               surface: Colors.white,
@@ -68,27 +70,62 @@ class _ExportHistoryDialogState extends State<ExportHistoryDialog> {
     });
 
     try {
-      // 1. Fetch Data (Directly from stream for now, or could change service to get Future)
-      // Since service returns Stream, we'll take the first snapshot.
-      // Ideally service should have a 'getHistory(start, end)' method, but we can filter client side.
-      final stream = _bookingService.getBookingsStream();
-      final allItems = await stream.first;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('User not logged in');
+
+      // 1. Fetch Data (Merge Local & Remote)
+      // Remote
+      List<Booking> remoteBookings = [];
+      try {
+        final snapshot = await _bookingService
+            .getBookingsStream(user.uid)
+            .first;
+        remoteBookings = snapshot;
+      } catch (e) {
+        debugPrint('Remote fetch error: $e');
+      }
+
+      // Local
+      final localBookings = await _localBookingService.getLocalBookings(
+        user.uid,
+      );
+
+      // Merge (Remote overrides Local by ID)
+      final Map<String, Booking> bookingMap = {};
+      for (var b in localBookings) {
+        bookingMap[b.id] = b;
+      }
+      for (var b in remoteBookings) {
+        bookingMap[b.id] = b;
+      }
+      final allItems = bookingMap.values.toList();
+
+      // Sort desc
+      allItems.sort((a, b) => b.startTime.compareTo(a.startTime));
 
       // 2. Filter
       final filteredItems = allItems.where((item) {
-        return item.date.isAfter(
+        return item.startTime.isAfter(
               _startDate!.subtract(const Duration(days: 1)),
             ) &&
-            item.date.isBefore(_endDate!.add(const Duration(days: 1)));
+            item.startTime.isBefore(_endDate!.add(const Duration(days: 1)));
       }).toList();
+
+      if (filteredItems.isEmpty) {
+        throw Exception('No bookings found in selected range');
+      }
 
       // 3. Generate PDF
       final pdf = pw.Document();
-      final user = FirebaseAuth.instance.currentUser;
-      final userName = user?.displayName ?? 'User';
+      final userName = user.displayName ?? 'User';
+
+      // Load font if needed, or use default
+      final font = await PdfGoogleFonts.outfitRegular();
+      final fontBold = await PdfGoogleFonts.outfitBold();
 
       pdf.addPage(
         pw.Page(
+          pageFormat: PdfPageFormat.a4,
           build: (pw.Context context) {
             return pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -101,13 +138,14 @@ class _ExportHistoryDialogState extends State<ExportHistoryDialog> {
                       pw.Text(
                         'PARKWISE',
                         style: pw.TextStyle(
+                          font: fontBold,
                           fontSize: 24,
                           fontWeight: pw.FontWeight.bold,
                         ),
                       ),
                       pw.Text(
                         'Parking History',
-                        style: const pw.TextStyle(fontSize: 18),
+                        style: pw.TextStyle(font: font, fontSize: 18),
                       ),
                     ],
                   ),
@@ -115,48 +153,78 @@ class _ExportHistoryDialogState extends State<ExportHistoryDialog> {
                 pw.SizedBox(height: 20),
                 pw.Text(
                   'User: $userName',
-                  style: const pw.TextStyle(fontSize: 14),
+                  style: pw.TextStyle(font: font, fontSize: 14),
+                ),
+                pw.Text(
+                  'Email: ${user.email ?? ""}',
+                  style: pw.TextStyle(font: font, fontSize: 14),
                 ),
                 pw.Text(
                   'Date Range: ${DateFormat('dd MMM yyyy').format(_startDate!)} - ${DateFormat('dd MMM yyyy').format(_endDate!)}',
-                  style: pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
+                  style: pw.TextStyle(
+                    font: font,
+                    fontSize: 12,
+                    color: PdfColors.grey700,
+                  ),
                 ),
                 pw.SizedBox(height: 20),
                 pw.Table.fromTextArray(
-                  headers: [
-                    'Date',
-                    'Spot',
-                    'Time',
-                    'Duration',
-                    'Method',
-                    'Amount',
-                  ],
+                  border: null,
+                  headers: ['Date', 'Spot Name', 'Vehicle', 'Time', 'Price'],
                   data: filteredItems.map((item) {
+                    final durationHours = item.endTime
+                        .difference(item.startTime)
+                        .inHours;
+                    final durationMins =
+                        item.endTime.difference(item.startTime).inMinutes % 60;
+                    final durationStr = '${durationHours}h ${durationMins}m';
+
                     return [
-                      DateFormat('dd MMM yy').format(item.date),
+                      DateFormat('dd MMM yy').format(item.startTime),
                       item.spotName,
-                      DateFormat('hh:mm a').format(item.date),
-                      item.duration,
-                      item.paymentMethod,
-                      'Rs. ${item.amount}',
+                      item.vehicleNumber,
+                      '${DateFormat('HH:mm').format(item.startTime)} ($durationStr)',
+                      'Rs. ${item.totalPrice.toStringAsFixed(0)}',
                     ];
                   }).toList(),
                   headerStyle: pw.TextStyle(
+                    font: fontBold,
                     fontWeight: pw.FontWeight.bold,
                     color: PdfColors.white,
+                    fontSize: 10,
                   ),
+                  cellStyle: pw.TextStyle(font: font, fontSize: 10),
                   headerDecoration: const pw.BoxDecoration(
                     color: PdfColors.black,
                   ),
                   rowDecoration: const pw.BoxDecoration(
                     border: pw.Border(
-                      bottom: pw.BorderSide(color: PdfColors.grey300),
+                      bottom: pw.BorderSide(
+                        color: PdfColors.grey300,
+                        width: 0.5,
+                      ),
                     ),
                   ),
                   cellAlignments: {
                     0: pw.Alignment.centerLeft,
-                    5: pw.Alignment.centerRight,
+                    1: pw.Alignment.centerLeft,
+                    2: pw.Alignment.centerLeft,
+                    3: pw.Alignment.centerLeft,
+                    4: pw.Alignment.centerRight,
                   },
+                  cellPadding: const pw.EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 8,
+                  ),
+                ),
+                pw.SizedBox(height: 20),
+                pw.Divider(),
+                pw.Align(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text(
+                    'Total Bookings: ${filteredItems.length}',
+                    style: pw.TextStyle(font: fontBold, fontSize: 12),
+                  ),
                 ),
               ],
             );
@@ -167,11 +235,12 @@ class _ExportHistoryDialogState extends State<ExportHistoryDialog> {
       // 4. Share
       await Printing.sharePdf(
         bytes: await pdf.save(),
-        filename: 'parkwise_${userName.replaceAll(' ', '_')}_history.pdf',
+        filename:
+            'parkwise_history_${DateFormat('yyyyMMdd').format(_today)}.pdf',
       );
 
       if (mounted) {
-        Navigator.pop(context); // Close dialog on success? Or stay open.
+        // Success feedback?
       }
     } catch (e) {
       debugPrint('Export Error: $e');
@@ -261,6 +330,7 @@ class _ExportHistoryDialogState extends State<ExportHistoryDialog> {
                 onPressed: _exportPdf,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

@@ -6,6 +6,7 @@ import 'package:parkwise/core/widgets/custom_background.dart';
 import 'package:parkwise/core/utils/validators.dart';
 import 'package:parkwise/features/home/screens/home_screen.dart';
 import 'package:parkwise/features/auth/services/auth_service.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -294,24 +295,68 @@ class _SignupScreenState extends State<SignupScreen> {
                                           MainAxisAlignment.spaceEvenly,
                                       children: [
                                         _SocialButton(
-                                          imagePath: 'assets/images/google.png',
                                           onTap: _isLoading
                                               ? () {}
                                               : _handleGoogleLogin,
+                                          child: Image.asset(
+                                            'assets/images/google.png',
+                                            height: 24,
+                                            width: 24,
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    const FaIcon(
+                                                      FontAwesomeIcons.google,
+                                                      color: Colors.red,
+                                                    ),
+                                          ),
                                         ),
                                         _SocialButton(
-                                          imagePath: 'assets/images/apple.png',
-                                          onTap: () {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Apple Sign In not configured yet',
-                                                ),
-                                              ),
-                                            );
+                                          onTap: () async {
+                                            try {
+                                              await _authService
+                                                  .signInWithFacebook();
+                                            } catch (e) {
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(e.toString()),
+                                                    backgroundColor:
+                                                        Colors.redAccent,
+                                                  ),
+                                                );
+                                              }
+                                            }
                                           },
+                                          child: const FaIcon(
+                                            FontAwesomeIcons.facebook,
+                                            color: Color(0xFF1877F2),
+                                          ),
+                                        ),
+                                        _SocialButton(
+                                          onTap: () async {
+                                            try {
+                                              await _authService
+                                                  .signInWithMicrosoft();
+                                            } catch (e) {
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(e.toString()),
+                                                    backgroundColor:
+                                                        Colors.redAccent,
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          },
+                                          child: const FaIcon(
+                                            FontAwesomeIcons.microsoft,
+                                            color: Color(0xFF00A4EF),
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -364,10 +409,10 @@ class _SignupScreenState extends State<SignupScreen> {
 }
 
 class _SocialButton extends StatelessWidget {
-  final String imagePath;
+  final Widget child;
   final VoidCallback onTap;
 
-  const _SocialButton({required this.imagePath, required this.onTap});
+  const _SocialButton({required this.child, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -375,13 +420,13 @@ class _SocialButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey.shade300),
           borderRadius: BorderRadius.circular(16),
           color: Colors.white,
         ),
-        child: Image.asset(imagePath, height: 28, width: 28),
+        child: SizedBox(height: 28, width: 28, child: Center(child: child)),
       ),
     );
   }

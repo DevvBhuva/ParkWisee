@@ -71,219 +71,108 @@ class _TicketScreenState extends State<TicketScreen> {
               ),
               child: Column(
                 children: [
-                  // Upper Part (Spot Image & Info)
+                  // Ticket Content
                   Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(24.0),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Placeholder Image
-                            Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                color: Colors.grey.shade300,
-                                image: const DecorationImage(
-                                  image: AssetImage(
-                                    'assets/images/parking_placeholder.png',
-                                  ), // Placeholder
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.local_parking,
-                                color: Colors.white,
-                                size: 40,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    widget.booking.spotName,
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '2 Cars | 4 Bikes', // Static placeholder or fetch capacity
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 12,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    _formatDate(widget.booking.startTime),
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 14,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                  Text(
-                                    _formatTimeRange(
-                                      widget.booking.startTime,
-                                      widget.booking.endTime,
-                                    ),
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 14,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                        // Parking Name
+                        Text(
+                          widget.booking.spotName,
+                          style: GoogleFonts.outfit(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 20),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '\u20B9${widget.booking.totalPrice.toStringAsFixed(0)}', // Dollar sign in original, using Rupee
-                              style: GoogleFonts.outfit(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue, // Theme color
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.green),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                'PAID', // Or fetch from status
-                                style: GoogleFonts.outfit(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.booking.spotAddress,
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const Divider(height: 40),
+
+                        // Date & Time (Bold)
+                        _buildDetailRow(
+                          'Date',
+                          _formatDate(widget.booking.startTime),
+                          isBold: true,
+                        ),
+                        _buildDetailRow(
+                          'Time',
+                          _formatTimeRange(
+                            widget.booking.startTime,
+                            widget.booking.endTime,
+                          ),
+                          isBold: true,
+                        ),
+
+                        // Price (Green)
+                        _buildDetailRow(
+                          'Price Paid',
+                          '\u20B9${widget.booking.totalPrice.toStringAsFixed(0)}',
+                          isBold: true,
+                          color: Colors.green.shade700,
+                        ),
+
+                        const Divider(height: 30),
+
+                        // Vehicle Info
+                        _buildDetailRow(
+                          'Vehicle Name',
+                          widget.booking.vehicleId,
+                        ),
+                        _buildDetailRow(
+                          'Vehicle Number',
+                          widget.booking.vehicleNumber,
+                          isBold: true,
+                        ),
+
+                        // Slot Info
+                        _buildDetailRow(
+                          'Slot Number',
+                          'Slot P${widget.booking.slotId + 1}',
+                          isBold: true,
                         ),
                       ],
                     ),
                   ),
 
-                  // Dashed Line + "SCAN QR"
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: CustomPaint(
-                          size: const Size(double.infinity, 1),
-                          painter: DashedLinePainter(),
+                  const SizedBox(height: 30),
+
+                  const SizedBox(height: 20),
+
+                  // QR Code Section
+                  Center(
+                    child: Column(
+                      children: [
+                        QrImageView(
+                          data: widget.booking.qrData,
+                          version: QrVersions.auto,
+                          size: 160.0,
+                          backgroundColor: Colors.white,
                         ),
-                      ),
-                      Container(
-                        color: const Color(0xFFFDFBF7),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Text(
-                          'SCAN QR CODE AT PARKING',
+                        const SizedBox(height: 12),
+                        Text(
+                          'Scan this QR code at entry/exit',
                           style: GoogleFonts.outfit(
-                            fontSize: 10,
+                            fontSize: 12,
                             color: Colors.grey.shade500,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.0,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Grid Info (Vehicle, Slot, Floor)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildGridItem('VEHICLE', widget.booking.vehicleNumber),
-                        _buildGridItem('SLOT', 'P${widget.booking.slotId + 1}'),
-                        _buildGridItem('FLOOR', 'Ground'), // Placeholder floor
                       ],
                     ),
                   ),
 
                   const SizedBox(height: 30),
-
-                  // QR Code
-                  QrImageView(
-                    data: widget.booking.qrData,
-                    version: QrVersions.auto,
-                    size: 180.0,
-                    backgroundColor: Colors.white,
-                  ),
-
-                  const SizedBox(height: 20),
-                  Text(
-                    'BOOKING ID : ${widget.booking.id.substring(0, 8).toUpperCase()}',
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 30),
                 ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Download Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Download feature coming soon!'),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2196F3), // Blue
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  'Download receipt',
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () {
-                Navigator.popUntil(context, (route) => route.isFirst);
-              },
-              child: Text(
-                'Back to Home',
-                style: GoogleFonts.outfit(color: Colors.grey),
               ),
             ),
           ],
@@ -292,27 +181,34 @@ class _TicketScreenState extends State<TicketScreen> {
     );
   }
 
-  Widget _buildGridItem(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 10,
-            color: Colors.grey.shade500,
-            fontWeight: FontWeight.bold,
+  Widget _buildDetailRow(
+    String label,
+    String value, {
+    bool isBold = false,
+    Color? color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.outfit(
+              color: Colors.grey.shade600,
+              fontSize: 14,
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: GoogleFonts.outfit(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
+          Text(
+            value,
+            style: GoogleFonts.outfit(
+              fontSize: 16,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+              color: color ?? Colors.black87,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -68,16 +68,31 @@ class AuthService {
     }
   }
 
-  // Sign In with Apple (Placeholder - requires specific setup)
-  Future<UserCredential> signInWithApple() async {
+  // Sign In with Facebook
+  Future<UserCredential> signInWithFacebook() async {
     try {
-      // Note: Apple Sign In usually requires 'sign_in_with_apple' package and specific iOS/Android setup.
-      // Since the user asked for "3rd party" generally, we'll start with Google implementing mostly.
-      // If Apple is strictly required, we would need to add that package too.
-      // For now, returning an error to indicate it needs setup.
+      // Trigger the authentication flow
+      // Note: Requires flutter_facebook_auth package and configuration
+      // For this implementation using Firebase Auth provider directly if possible
+      // or returning standard error for setup
+
+      // Placeholder for Facebook Auth
       throw Exception(
-        "Apple Sign In requires additional platform configuration.",
+        "Facebook Sign In requires 'flutter_facebook_auth' package and App ID configuration.",
       );
+    } catch (e) {
+      throw _handleAuthException(e);
+    }
+  }
+
+  // Sign In with Microsoft
+  Future<UserCredential> signInWithMicrosoft() async {
+    try {
+      // Create a new provider
+      final MicrosoftAuthProvider microsoftProvider = MicrosoftAuthProvider();
+      // Once signed in, return the UserCredential
+      // Note: This often requires web-based flow or specific package on mobile
+      return await _auth.signInWithProvider(microsoftProvider);
     } catch (e) {
       throw _handleAuthException(e);
     }

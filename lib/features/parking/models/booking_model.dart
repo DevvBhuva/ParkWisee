@@ -7,7 +7,8 @@ class Booking {
   final String spotName;
   final String spotAddress;
   final int slotId;
-  final String vehicleId; // e.g., 'car_123'
+  final String vehicleId; // e.g., 'car', 'bike' (Category Key)
+  final String? vehicleModel; // e.g., 'Swift', 'Honda City'
   final String vehicleNumber; // e.g., 'GJ 01 AB 1234'
   final DateTime startTime;
   final DateTime endTime;
@@ -15,6 +16,8 @@ class Booking {
   final String status; // 'confirmed', 'completed', 'cancelled'
   final DateTime createdAt;
   final String qrData;
+  final String? paymentMethodId;
+  final String? paymentMethodType; // 'CARD', 'UPI', 'CASH'
 
   Booking({
     required this.id,
@@ -24,6 +27,7 @@ class Booking {
     required this.spotAddress,
     required this.slotId,
     required this.vehicleId,
+    this.vehicleModel,
     required this.vehicleNumber,
     required this.startTime,
     required this.endTime,
@@ -31,6 +35,8 @@ class Booking {
     required this.status,
     required this.createdAt,
     required this.qrData,
+    this.paymentMethodId,
+    this.paymentMethodType,
   });
 
   Map<String, dynamic> toMap() {
@@ -42,6 +48,7 @@ class Booking {
       'spotAddress': spotAddress,
       'slotId': slotId,
       'vehicleId': vehicleId,
+      'vehicleModel': vehicleModel,
       'vehicleNumber': vehicleNumber,
       'startTime': Timestamp.fromDate(startTime),
       'endTime': Timestamp.fromDate(endTime),
@@ -49,6 +56,8 @@ class Booking {
       'status': status,
       'createdAt': Timestamp.fromDate(createdAt),
       'qrData': qrData,
+      'paymentMethodId': paymentMethodId,
+      'paymentMethodType': paymentMethodType,
     };
   }
 
@@ -61,6 +70,7 @@ class Booking {
       spotAddress: map['spotAddress'] ?? '',
       slotId: map['slotId']?.toInt() ?? 0,
       vehicleId: map['vehicleId'] ?? '',
+      vehicleModel: map['vehicleModel'],
       vehicleNumber: map['vehicleNumber'] ?? '',
       startTime: (map['startTime'] as Timestamp).toDate(),
       endTime: (map['endTime'] as Timestamp).toDate(),
@@ -68,6 +78,8 @@ class Booking {
       status: map['status'] ?? 'unknown',
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       qrData: map['qrData'] ?? '',
+      paymentMethodId: map['paymentMethodId'],
+      paymentMethodType: map['paymentMethodType'],
     );
   }
 }

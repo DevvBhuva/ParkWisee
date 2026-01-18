@@ -5,7 +5,12 @@ import 'package:parkwise/features/parking/models/parking_spot.dart';
 import 'package:parkwise/features/home/widgets/slide_to_book_button.dart';
 import 'package:parkwise/features/parking/widgets/circular_duration_slider.dart';
 import 'package:parkwise/features/parking/widgets/vehicle_details_popup.dart';
+import 'package:parkwise/features/parking/services/booking_firestore_service.dart';
 import 'package:parkwise/features/parking/screens/booking_summary_screen.dart';
+
+// ... (existing imports)
+
+// ... (existing imports)
 
 class BookingScreen extends StatefulWidget {
   final ParkingSpot spot;
@@ -32,7 +37,10 @@ class _BookingScreenState extends State<BookingScreen> {
   double _duration = 1.0; // Hours
   int _daySelectionIndex = 0; // 0: Today, 1: Tomorrow, 2: Later
 
+  final BookingFirestoreService _bookingService = BookingFirestoreService();
+
   void _showBookingDetails() {
+    // ... (same as before)
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -232,6 +240,8 @@ class _BookingScreenState extends State<BookingScreen> {
                                                   licensePlate: plate,
                                                   hourlyRate:
                                                       widget.pricePerHour,
+                                                  vehicleType: widget
+                                                      .vehicleType, // Pass correct vehicle category
                                                 ),
                                           ),
                                         );
@@ -276,156 +286,215 @@ class _BookingScreenState extends State<BookingScreen> {
         ),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          // ------------------------------------------
-          // FULL SCREEN SLOT GRID
-          // ------------------------------------------
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  // Lane Labels & Arrows
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 24.0,
-                      horizontal: 16.0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          children: [
-                            Text(
-                              'ENTRY',
-                              style: GoogleFonts.outfit(
-                                color: Colors.black87,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.5,
-                              ),
-                            ),
-                            const Icon(
-                              Icons.arrow_downward,
-                              color: Colors.blue,
-                              size: 24,
-                            ),
-                          ],
-                        ),
-                        // Road Markings (Dashed Line)
-                        Container(
-                          height: 40,
-                          width: 2,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        Column(
-                          children: [
-                            Text(
-                              'EXIT',
-                              style: GoogleFonts.outfit(
-                                color: Colors.black87,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.5,
-                              ),
-                            ),
-                            const Icon(
-                              Icons.arrow_upward,
-                              color: Colors.red,
-                              size: 24,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: GridView.builder(
-                      padding: const EdgeInsets.only(bottom: 100),
-                      itemCount: widget.availableSlots,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 60,
-                            mainAxisSpacing: 24,
-                            childAspectRatio: 2.2,
-                          ),
-                      itemBuilder: (context, index) {
-                        final slotNumber = index + 1;
-                        final isSelected = _selectedSlotId == index;
+      body: StreamBuilder<List<int>>(
+        stream: _bookingService.getOccupiedSlots(
+          widget.spot.id,
+          widget.vehicleType,
+        ),
+        builder: (context, snapshot) {
+          final occupiedSlots = snapshot.data ?? [];
 
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedSlotId = index;
-                            });
-                            // Open Details Sheet immediately on tap?
-                            // User said: "once user select the slot after that this pop up regarding booking will appear"
-                            // So yes, trigger sheet.
-                            _showBookingDetails();
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? Colors.green.shade50
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isSelected
-                                    ? Colors.green
-                                    : Colors.grey.shade300,
-                                width: isSelected ? 2 : 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: isSelected
-                                      ? Colors.green.withOpacity(0.2)
-                                      : Colors.black.withOpacity(0.05),
-                                  blurRadius: isSelected ? 8 : 4,
-                                  offset: const Offset(0, 4),
+          // Determine grid size.
+          // Problem: availableSlots decreases when booked.
+          // BUT we want to show all slots (e.g. 10).
+          // Heuristic: total = currentAvailable + bookedCount
+          // If a new booking happens, available decreases, occupied increases. Total stays same.
+          final totalEffectiveSlots =
+              widget.availableSlots + occupiedSlots.length;
+
+          return Column(
+            children: [
+              // ------------------------------------------
+              // FULL SCREEN SLOT GRID
+              // ------------------------------------------
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    children: [
+                      // Lane Labels & Arrows
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 24.0,
+                          horizontal: 16.0,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              children: [
+                                Text(
+                                  'ENTRY',
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.black87,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.5,
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.arrow_downward,
+                                  color: Colors.blue,
+                                  size: 24,
                                 ),
                               ],
                             ),
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    'P$slotNumber',
-                                    style: GoogleFonts.outfit(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 20,
-                                      color: isSelected
-                                          ? Colors.green.shade800
-                                          : Colors.black87,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Available',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 12,
-                                      color: Colors.green,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
+                            // Road Markings (Dashed Line)
+                            Container(
+                              height: 40,
+                              width: 2,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade300,
+                                borderRadius: BorderRadius.circular(2),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                            Column(
+                              children: [
+                                Text(
+                                  'EXIT',
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.black87,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.5,
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.arrow_upward,
+                                  color: Colors.red,
+                                  size: 24,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: GridView.builder(
+                          padding: const EdgeInsets.only(bottom: 100),
+                          // Use calculated total so grid doesn't shrink
+                          itemCount: totalEffectiveSlots > 0
+                              ? totalEffectiveSlots
+                              : widget.availableSlots,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 60,
+                                mainAxisSpacing: 24,
+                                childAspectRatio: 2.2,
+                              ),
+                          itemBuilder: (context, index) {
+                            final slotNumber = index + 1;
+                            // Check if this specific index is in occupied list
+                            // We stored 'slotId' in the booking document.
+                            // Assuming 'slotId' corresponds to 'index'.
+                            final isBooked = occupiedSlots.contains(index);
+                            final isSelected = _selectedSlotId == index;
+
+                            // Visuals for Booked Slot
+                            if (isBooked) {
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: Colors.red.shade200,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'P$slotNumber',
+                                        style: GoogleFonts.outfit(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 20,
+                                          color: Colors.red.shade300,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Booked',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 12,
+                                          color: Colors.red.shade300,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedSlotId = index;
+                                });
+                                _showBookingDetails();
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? Colors.green.shade50
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? Colors.green
+                                        : Colors.grey.shade300,
+                                    width: isSelected ? 2 : 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: isSelected
+                                          ? Colors.green.withOpacity(0.2)
+                                          : Colors.black.withOpacity(0.05),
+                                      blurRadius: isSelected ? 8 : 4,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'P$slotNumber',
+                                        style: GoogleFonts.outfit(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 20,
+                                          color: isSelected
+                                              ? Colors.green.shade800
+                                              : Colors.black87,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Available',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 12,
+                                          color: Colors.green,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }

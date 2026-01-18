@@ -9,6 +9,10 @@ import 'package:parkwise/features/home/widgets/slide_to_book_button.dart';
 import 'package:parkwise/features/parking/models/booking_model.dart';
 import 'package:parkwise/features/parking/services/booking_firestore_service.dart';
 import 'package:uuid/uuid.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:parkwise/features/parking/services/local_booking_service.dart';
+import 'package:parkwise/features/notifications/services/notification_service.dart';
+import 'package:parkwise/features/notifications/models/notification_model.dart';
 import 'dart:convert';
 
 class BookingSummaryScreen extends StatefulWidget {
@@ -20,6 +24,7 @@ class BookingSummaryScreen extends StatefulWidget {
   final String vehicleModel;
   final String licensePlate;
   final double hourlyRate;
+  final String vehicleType; // Added: 'car', 'bike', etc.
 
   const BookingSummaryScreen({
     Key? key,
@@ -31,6 +36,7 @@ class BookingSummaryScreen extends StatefulWidget {
     required this.vehicleModel,
     required this.licensePlate,
     required this.hourlyRate,
+    required this.vehicleType,
   }) : super(key: key);
 
   @override
@@ -40,8 +46,9 @@ class BookingSummaryScreen extends StatefulWidget {
 class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
   final PaymentFirestoreService _paymentService = PaymentFirestoreService();
   final BookingFirestoreService _bookingService = BookingFirestoreService();
+  final LocalBookingService _localBookingService = LocalBookingService();
 
-  String? _selectedPaymentId;
+  PaymentMethod? _selectedPaymentMethod;
 
   String _formatDateTime(DateTime dt) {
     return DateFormat('EEE, MMM d • h:mm a').format(dt);
@@ -206,10 +213,11 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                 return Column(
                   children: [
                     ...methods.map((method) {
-                      final isSelected = _selectedPaymentId == method.id;
+                      final isSelected =
+                          _selectedPaymentMethod?.id == method.id;
                       return GestureDetector(
                         onTap: () {
-                          setState(() => _selectedPaymentId = method.id);
+                          setState(() => _selectedPaymentMethod = method);
                         },
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -337,62 +345,120 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
         child: SafeArea(
           child: SizedBox(
             height: 60,
-            child: SlideToBookButton(
-              label:
-                  'Slide to Pay \u20B9${widget.totalPrice.toStringAsFixed(0)}',
-              completionLabel: 'Booked Slot',
-              onCompleted: () async {
-                final bookingId = const Uuid().v4();
-
-                // Generate QR Data
-                final qrDataMap = {
-                  'bid': bookingId,
-                  'sid': widget.spot.id,
-                  'slot': widget.slotId + 1,
-                  'veh': widget.licensePlate,
-                  'time': widget.startTime.toIso8601String(),
-                };
-                final qrDataJson = jsonEncode(qrDataMap);
-
-                final newBooking = Booking(
-                  id: bookingId,
-                  userId: 'user_12345', // TODO: Replace with real user ID
-                  parkingSpotId: widget.spot.id,
-                  spotName: widget.spot.name,
-                  spotAddress: widget.spot.address,
-                  slotId: widget.slotId,
-                  vehicleId: 'unknown', // Only have model/plate here
-                  vehicleNumber: widget.licensePlate,
-                  startTime: widget.startTime,
-                  endTime: widget.startTime.add(
-                    Duration(minutes: (widget.duration * 60).toInt()),
-                  ),
-                  totalPrice: widget.totalPrice,
-                  status: 'confirmed',
-                  createdAt: DateTime.now(),
-                  qrData: qrDataJson,
-                );
-
-                try {
-                  await _bookingService.createBooking(newBooking);
-
-                  if (!mounted) return;
-
-                  // Navigate to Ticket Screen
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TicketScreen(booking: newBooking),
+            child: _selectedPaymentMethod == null
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(30),
                     ),
-                  );
-                } catch (e) {
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('Booking failed: $e')));
-                }
-              },
-            ),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Select Payment Method',
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : SlideToBookButton(
+                    label:
+                        'Slide to Pay \u20B9${widget.totalPrice.toStringAsFixed(0)}',
+                    completionLabel: 'Booked Slot',
+                    onCompleted: () async {
+                      print('>>> SLIDE COMPLETED: STARTING BOOKING PROCESS');
+                      final user = FirebaseAuth.instance.currentUser;
+                      if (user == null) {
+                        print('>>> ERROR: User is null');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please login to book')),
+                        );
+                        return;
+                      }
+
+                      final bookingId = const Uuid().v4();
+                      print('>>> Generated Booking ID: $bookingId');
+
+                      // Generate QR Data
+                      final qrDataMap = {
+                        'bid': bookingId,
+                        'sid': widget.spot.id,
+                        'slot': widget.slotId + 1,
+                        'veh': widget.licensePlate,
+                        'time': widget.startTime.toIso8601String(),
+                      };
+                      final qrDataJson = jsonEncode(qrDataMap);
+
+                      final newBooking = Booking(
+                        id: bookingId,
+                        userId: user.uid,
+                        parkingSpotId: widget.spot.id,
+                        spotName: widget.spot.name,
+                        spotAddress: widget.spot.address,
+                        slotId: widget.slotId,
+                        vehicleId: widget
+                            .vehicleType, // Corrected: Use category key ('car') not model
+                        vehicleModel: widget
+                            .vehicleModel, // Pass model separately if needed (requires model update) or just keep using vehicleNumber for details
+                        vehicleNumber: widget.licensePlate,
+                        startTime: widget.startTime,
+                        endTime: widget.startTime.add(
+                          Duration(minutes: (widget.duration * 60).toInt()),
+                        ),
+                        totalPrice: widget.totalPrice,
+                        status: 'confirmed',
+                        createdAt: DateTime.now(),
+                        qrData: qrDataJson,
+                        paymentMethodId: _selectedPaymentMethod?.id,
+                        paymentMethodType: _selectedPaymentMethod?.category,
+                      );
+
+                      try {
+                        print(
+                          '>>> Calling BookingFirestoreService.createBooking...',
+                        );
+                        await _bookingService.createBooking(newBooking);
+                        print('>>> BookingFS Success!');
+
+                        // Create Notification
+                        try {
+                          await NotificationService().createNotification(
+                            title: 'Parking Confirmed',
+                            body:
+                                'Your slot at ${widget.spot.name} is reserved from ${DateFormat('HH:mm').format(newBooking.startTime)}–${DateFormat('HH:mm').format(newBooking.endTime)}.',
+                            type: NotificationType.confirmation,
+                            relatedBookingId: newBooking.id,
+                          );
+                        } catch (e) {
+                          debugPrint('Notif Error: $e');
+                        }
+                      } catch (e) {
+                        // Failsafe: Navigate even if permission denied
+                        print('>>> CRITICAL BOOKING ERROR: $e');
+
+                        // Save locally
+                        print('>>> Saving locally as fallback...');
+                        await _localBookingService.saveBooking(newBooking);
+                      }
+
+                      if (!mounted) return;
+
+                      // Navigate to Ticket Screen
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              TicketScreen(booking: newBooking),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ),
       ),

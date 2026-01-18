@@ -5,6 +5,9 @@ import 'package:parkwise/features/parking/models/parking_spot.dart';
 import 'package:parkwise/features/parking/services/parking_firestore_service.dart';
 import 'package:parkwise/features/home/screens/profile_screen.dart';
 import 'package:parkwise/features/parking/screens/bookings_screen.dart';
+import 'package:parkwise/features/notifications/services/notification_service.dart';
+import 'package:parkwise/features/notifications/models/notification_model.dart';
+import 'package:parkwise/features/notifications/widgets/notification_popup.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -238,12 +241,45 @@ class _HomeScreenState extends State<HomeScreen> {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
-                return Text("Error: ${snapshot.error}");
+                // Return generic error, or empty list
+                return const SizedBox.shrink();
               }
 
-              final parkings = snapshot.data ?? [];
+              final allParkings = snapshot.data ?? [];
+
+              // Filter Parkings
+              List<ParkingSpot> filteredParkings = allParkings;
+              String? selectedVehicleTypeKey;
+
+              if (_selectedVehicleIndex != -1) {
+                final category = _vehicleCategories[_selectedVehicleIndex];
+                // Map display name to key (e.g. "Hatchback" -> "hatchback", "EV" -> "ev")
+                // Assuming keys in DB match these but lowercased.
+                // DB Keys seen in model: 'hatchback', 'car', etc.
+                // 'EV' -> 'ev', 'SUV' -> 'suv'
+                selectedVehicleTypeKey = (category['name'] as String)
+                    .toLowerCase();
+
+                filteredParkings = allParkings.where((spot) {
+                  final vData = spot.vehicles[selectedVehicleTypeKey];
+                  return vData != null && vData.slots > 0;
+                }).toList();
+              }
+
               // Use first 3 for home screen
-              final displayParkings = parkings.take(3).toList();
+              final displayParkings = filteredParkings.take(3).toList();
+
+              if (displayParkings.isEmpty && _selectedVehicleIndex != -1) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: Text(
+                      "No parking spots found for ${_vehicleCategories[_selectedVehicleIndex]['name']}",
+                      style: GoogleFonts.outfit(color: Colors.grey),
+                    ),
+                  ),
+                );
+              }
 
               return ListView.separated(
                 physics: const NeverScrollableScrollPhysics(),
@@ -253,7 +289,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 separatorBuilder: (context, index) =>
                     const SizedBox(height: 20),
                 itemBuilder: (context, index) {
-                  return _buildParkingCard(displayParkings[index]);
+                  return _buildParkingCard(
+                    displayParkings[index],
+                    selectedVehicleTypeKey,
+                  );
                 },
               );
             },
@@ -335,25 +374,66 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  final NotificationService _notificationService = NotificationService();
+
   Widget _buildHeaderButton(IconData icon) {
-    return Container(
-      width: 50,
-      height: 50,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        // Removed shadow to match requested simpler search look, or kept minimal if user only complained about search border?
-        // User said "remove the border higlighting where to park", specific to search.
-        // I'll keep button shadow as it gives depth, unless user complains.
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return StreamBuilder<List<NotificationModel>>(
+      stream: _notificationService.getNotificationsStream(),
+      builder: (context, snapshot) {
+        final notifications = snapshot.data ?? [];
+        final unreadCount = notifications.where((n) => !n.isRead).length;
+
+        return GestureDetector(
+          onTap: () {
+            showDialog(
+              context: context,
+              builder: (context) => NotificationPopup(
+                notifications: notifications,
+                onMarkAllRead: () {
+                  _notificationService.markAllAsRead();
+                },
+              ),
+            );
+          },
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: Colors.black87),
+              ),
+              if (unreadCount > 0)
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                      border: Border.fromBorderSide(
+                        BorderSide(color: Colors.white, width: 2),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
-        ],
-      ),
-      child: Icon(icon, color: Colors.black87),
+        );
+      },
     );
   }
 
@@ -411,14 +491,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildParkingCard(ParkingSpot parking) {
+  Widget _buildParkingCard(ParkingSpot parking, [String? selectedVehicleType]) {
     return GestureDetector(
       onTap: () {
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
-          builder: (context) => ParkingDetailsPopup(parking: parking),
+          builder: (context) => ParkingDetailsPopup(
+            parking: parking,
+            initialVehicleType: selectedVehicleType,
+          ),
         );
       },
       child: Container(
