@@ -105,8 +105,20 @@ class ParkingSpot {
       address: data['landmark'] ?? '',
       pricePerHour: basePrice,
       rating: parseDouble(data['rating'] ?? 4.2),
-      latitude: parseDouble(location['latitude']),
-      longitude: parseDouble(location['longitude']),
+      latitude: parseDouble(
+        data['latitude'] ??
+            data['lat'] ??
+            location['latitude'] ??
+            location['lat'],
+      ),
+      longitude: parseDouble(
+        data['longitude'] ??
+            data['long'] ??
+            data['lng'] ??
+            location['longitude'] ??
+            location['long'] ??
+            location['lng'],
+      ),
       imageUrl: data['imageUrl'] ?? 'assets/images/parking_aerial.jpg',
       totalSpots: data['totalSpots'] ?? 50,
       availableSpots: data['availableSpots'] ?? 20,

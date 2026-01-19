@@ -5,8 +5,11 @@ import 'package:parkwise/core/theme/app_theme.dart';
 import 'package:parkwise/features/auth/screens/welcome_screen.dart';
 import 'package:parkwise/features/home/screens/home_screen.dart';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   try {
     // For Android, this will automatically use the google-services.json file
     // that we added to android/app/

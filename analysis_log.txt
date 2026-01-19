@@ -1,0 +1,8 @@
+﻿Analyzing navigation_screen.dart...                             
+
+   info - The private field _annotationIdToSpot could be 'final' - lib\features\navigation\screens\navigation_screen.dart:49:28 - prefer_final_fields
+warning - The value of the field '_allSpots' isn't used - lib\features\navigation\screens\navigation_screen.dart:50:21 - unused_field
+   info - 'addOnPointAnnotationClickListener' is deprecated and shouldn't be used. Use [tapEvents] instead - lib\features\navigation\screens\navigation_screen.dart:609:15 - deprecated_member_use
+  error - The property 'id' can't be unconditionally accessed because the receiver can be 'null' - lib\features\navigation\screens\navigation_screen.dart:1098:44 - unchecked_use_of_nullable_value
+   info - 'OnPointAnnotationClickListener' is deprecated and shouldn't be used. This is deprecated and will be removed in future releases. Use annotations [tapEvents] instead - lib\features\navigation\screens\navigation_screen.dart:1157:39 - deprecated_member_use
+

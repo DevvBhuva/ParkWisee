@@ -8,6 +8,7 @@ import 'package:parkwise/features/parking/screens/bookings_screen.dart';
 import 'package:parkwise/features/notifications/services/notification_service.dart';
 import 'package:parkwise/features/notifications/models/notification_model.dart';
 import 'package:parkwise/features/notifications/widgets/notification_popup.dart';
+import 'package:parkwise/features/navigation/screens/navigation_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,9 +22,10 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedVehicleIndex = -1; // No vehicle selected by default
   final ParkingFirestoreService _parkingService = ParkingFirestoreService();
 
-  // Search Expand State
-  bool _isSearchExpanded = false;
-  final TextEditingController _searchController = TextEditingController();
+  @override
+  void dispose() {
+    super.dispose();
+  }
 
   // Vehicle Categories
   final List<Map<String, dynamic>> _vehicleCategories = [
@@ -33,12 +35,6 @@ class _HomeScreenState extends State<HomeScreen> {
     {'name': 'EV', 'image': 'assets/images/ev_icon.jpg'},
     {'name': 'Bike', 'image': 'assets/images/bike_icon.jpg'},
   ];
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _buildHomeContent(),
               const BookingsScreen(),
-              const Center(child: Text("Nav Placeholder")), // Placeholder
+              const NavigationScreen(),
               const ProfileScreen(),
             ],
           ),
@@ -77,99 +73,8 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           // Header: Search & Notification
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Expandable Search Bar
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 400),
-                curve: Curves.easeInOut,
-                width: _isSearchExpanded
-                    ? MediaQuery.of(context).size.width - 48 - 60
-                    : 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
-                  // Removed shadow/border completely as requested ("remove the border higlighting where to park / remove that")
-                ),
-                child: Stack(
-                  children: [
-                    // Text Field
-                    if (_isSearchExpanded)
-                      Positioned.fill(
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 16, right: 50),
-                          child: Center(
-                            child: TextField(
-                              controller: _searchController,
-                              autofocus: false,
-                              decoration: InputDecoration(
-                                hintText: 'Where to park ??', // Updated hint
-                                hintStyle: GoogleFonts.outfit(
-                                  color: Colors.grey,
-                                ),
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.zero,
-                                isDense: true,
-                              ),
-                              style: GoogleFonts.outfit(color: Colors.black87),
-                              onSubmitted: (value) {
-                                // Add search logic here if needed
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-
-                    // Rolling Search Icon
-                    AnimatedPositioned(
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeInOut,
-                      left: _isSearchExpanded
-                          ? (MediaQuery.of(context).size.width - 48 - 60) -
-                                50 // Move to right end
-                          : 0, // Keep at left
-                      top: 0,
-                      bottom: 0,
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _isSearchExpanded = !_isSearchExpanded;
-                            if (!_isSearchExpanded) {
-                              _searchController.clear();
-                              FocusScope.of(context).unfocus();
-                            }
-                          });
-                        },
-                        child: TweenAnimationBuilder(
-                          tween: Tween<double>(
-                            begin: 0,
-                            end: _isSearchExpanded ? 1 : 0,
-                          ),
-                          duration: const Duration(milliseconds: 400),
-                          builder: (context, double value, child) {
-                            return Transform.rotate(
-                              angle: value * 2 * 3.14159, // Full rotation (2pi)
-                              child: Container(
-                                width: 50,
-                                height: 50,
-                                alignment: Alignment.center,
-                                child: const Icon(
-                                  Icons.search,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              _buildHeaderButton(Icons.notifications_outlined),
-            ],
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [_buildHeaderButton(Icons.notifications_outlined)],
           ),
           const SizedBox(height: 32),
 
