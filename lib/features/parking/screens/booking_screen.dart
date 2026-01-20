@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
+
 import 'package:parkwise/features/parking/models/parking_spot.dart';
 import 'package:parkwise/features/home/widgets/slide_to_book_button.dart';
 import 'package:parkwise/features/parking/widgets/circular_duration_slider.dart';
@@ -33,7 +33,7 @@ class BookingScreen extends StatefulWidget {
 class _BookingScreenState extends State<BookingScreen> {
   int _selectedSlotId = -1; // -1 means none selected
   DateTime _selectedDate = DateTime.now();
-  TimeOfDay _startTime = TimeOfDay.now();
+
   double _duration = 1.0; // Hours
   int _daySelectionIndex = 0; // 0: Today, 1: Tomorrow, 2: Later
 
@@ -230,7 +230,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                             builder: (context) =>
                                                 BookingSummaryScreen(
                                                   spot: widget.spot,
-                                                  slotId: _selectedSlotId!,
+                                                  slotId: _selectedSlotId,
                                                   startTime: _selectedDate,
                                                   duration: _duration,
                                                   totalPrice:
@@ -527,7 +527,9 @@ class _BookingScreenState extends State<BookingScreen> {
                             Colors.green.shade700, // Button text color
                       ),
                     ),
-                    dialogBackgroundColor: Colors.white,
+                    dialogTheme: const DialogThemeData(
+                      backgroundColor: Colors.white,
+                    ),
                   ),
                   child: child!,
                 );
@@ -571,11 +573,5 @@ class _BookingScreenState extends State<BookingScreen> {
         ),
       ),
     );
-  }
-
-  String _formatTime(TimeOfDay time) {
-    final now = DateTime.now();
-    final dt = DateTime(now.year, now.month, now.day, time.hour, time.minute);
-    return DateFormat('h:mm a').format(dt);
   }
 }

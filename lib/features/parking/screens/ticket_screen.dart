@@ -4,8 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:parkwise/features/parking/models/booking_model.dart';
 // import 'package:screenshot/screenshot.dart'; // Optional for download receipt
-import 'dart:ui' as ui;
-import 'package:flutter/rendering.dart';
+
 // import 'package:image_gallery_saver/image_gallery_saver.dart'; // Would need this for actual download
 
 class TicketScreen extends StatefulWidget {

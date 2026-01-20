@@ -1,0 +1,5 @@
+﻿Analyzing home_screen.dart...                                   
+
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\screens\home_screen.dart:439:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\screens\home_screen.dart:626:33 - deprecated_member_use
+

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:parkwise/core/theme/app_colors.dart';
+
 import 'package:parkwise/features/auth/screens/login_screen.dart';
 import 'package:parkwise/features/auth/screens/signup_screen.dart';
 import 'package:parkwise/core/widgets/custom_background.dart';

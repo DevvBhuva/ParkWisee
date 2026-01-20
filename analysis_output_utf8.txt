@@ -1,0 +1,14 @@
+﻿Analyzing home_screen.dart...                                   
+
+   info - Statements in an if should be enclosed in a block - lib\features\home\screens\home_screen.dart:267:23 - curly_braces_in_flow_control_structures
+   info - Unnecessary use of multiple underscores - lib\features\home\screens\home_screen.dart:287:45 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\screens\home_screen.dart:333:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\screens\home_screen.dart:391:45 - deprecated_member_use
+warning - The value of the field '_vehicleCategories' isn't used - lib\features\home\screens\home_screen.dart:419:36 - unused_field
+  error - The name '_vehicleCategories' is already defined - lib\features\home\screens\home_screen.dart:419:36 - duplicate_definition
+  error - The name 'build' is already defined - lib\features\home\screens\home_screen.dart:428:10 - duplicate_definition
+warning - The declaration '_buildHomeContent' isn't referenced - lib\features\home\screens\home_screen.dart:458:10 - unused_element
+  error - The name '_buildHomeContent' is already defined - lib\features\home\screens\home_screen.dart:458:10 - duplicate_definition
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\screens\home_screen.dart:619:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\screens\home_screen.dart:806:33 - deprecated_member_use
+

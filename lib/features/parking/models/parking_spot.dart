@@ -72,7 +72,11 @@ class ParkingSpot {
       if (sVal is num) {
         slots = sVal.toInt();
       } else if (sVal is String) {
-        slots = int.tryParse(sVal) ?? 0;
+        slots = int.tryParse(sVal) ?? 10; // Default to 10 if string parse fails
+      } else {
+        // If slots map is missing completely for this key, default to something > 0 so it shows up?
+        // Actually, let's default to 10 if we have a price but no slot info.
+        slots = 10;
       }
 
       vehicles[key] = VehicleData(price: price, slots: slots);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:parkwise/features/home/widgets/parking_details_popup.dart';
+
 import 'package:parkwise/features/parking/models/parking_spot.dart';
 import 'package:parkwise/features/parking/services/parking_firestore_service.dart';
 import 'package:parkwise/features/home/screens/profile_screen.dart';
@@ -9,6 +10,14 @@ import 'package:parkwise/features/notifications/services/notification_service.da
 import 'package:parkwise/features/notifications/models/notification_model.dart';
 import 'package:parkwise/features/notifications/widgets/notification_popup.dart';
 import 'package:parkwise/features/navigation/screens/navigation_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:parkwise/features/parking/services/booking_firestore_service.dart';
+import 'package:parkwise/features/home/models/location_model.dart';
+import 'package:parkwise/features/home/services/location_service.dart';
+import 'package:parkwise/features/home/widgets/location_header_button.dart';
+import 'package:parkwise/features/home/widgets/city_selection_popup.dart';
+import 'package:parkwise/features/home/widgets/area_selection_popup.dart';
+import 'dart:math' show cos, sqrt, asin;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,6 +30,27 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   int _selectedVehicleIndex = -1; // No vehicle selected by default
   final ParkingFirestoreService _parkingService = ParkingFirestoreService();
+  final BookingFirestoreService _bookingService = BookingFirestoreService();
+
+  // Location State
+  final LocationService _locationService = LocationService();
+  City? _selectedCity;
+  Area? _selectedArea;
+
+  @override
+  void initState() {
+    super.initState();
+    _cleanupBookings();
+    // Initialize default location (Async now, so maybe we leave it or load user prefs)
+    // For now, we start with "Select Location" until user picks one.
+  }
+
+  Future<void> _cleanupBookings() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await _bookingService.checkAndReleaseExpiredBookings(user.uid);
+    }
+  }
 
   @override
   void dispose() {
@@ -73,8 +103,20 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           // Header: Search & Notification
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [_buildHeaderButton(Icons.notifications_outlined)],
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Location Button
+              CompositedTransformTarget(
+                link: _layerLink,
+                child: LocationHeaderButton(
+                  locationText: _selectedArea != null && _selectedCity != null
+                      ? '${_selectedArea!.name}, ${_selectedCity!.name}'
+                      : _selectedCity?.name ?? 'Select Location',
+                  onTap: _showCitySelection,
+                ),
+              ),
+              _buildHeaderButton(Icons.notifications_outlined),
+            ],
           ),
           const SizedBox(height: 32),
 
@@ -153,23 +195,65 @@ class _HomeScreenState extends State<HomeScreen> {
               final allParkings = snapshot.data ?? [];
 
               // Filter Parkings
+              // Filter Parkings
               List<ParkingSpot> filteredParkings = allParkings;
               String? selectedVehicleTypeKey;
 
               if (_selectedVehicleIndex != -1) {
                 final category = _vehicleCategories[_selectedVehicleIndex];
-                // Map display name to key (e.g. "Hatchback" -> "hatchback", "EV" -> "ev")
-                // Assuming keys in DB match these but lowercased.
-                // DB Keys seen in model: 'hatchback', 'car', etc.
-                // 'EV' -> 'ev', 'SUV' -> 'suv'
                 selectedVehicleTypeKey = (category['name'] as String)
                     .toLowerCase();
 
+                print("DEBUG: Filtering for Vehicle: $selectedVehicleTypeKey");
+
                 filteredParkings = allParkings.where((spot) {
                   final vData = spot.vehicles[selectedVehicleTypeKey];
-                  return vData != null && vData.slots > 0;
+
+                  if (vData == null) {
+                    print(
+                      "DEBUG: Hiding ${spot.name} - Vehicle '$selectedVehicleTypeKey' not supported. (Available: ${spot.vehicles.keys})",
+                    );
+                    return false;
+                  }
+                  if (vData.slots <= 0) {
+                    print(
+                      "DEBUG: Hiding ${spot.name} - No slots for '$selectedVehicleTypeKey'",
+                    );
+                    return false;
+                  }
+
+                  return true;
                 }).toList();
               }
+
+              // Filter by Location (Distance) if an area is selected
+              if (_selectedArea != null) {
+                print(
+                  "DEBUG: Selected Area: ${_selectedArea!.name} (${_selectedArea!.latitude}, ${_selectedArea!.longitude})",
+                );
+
+                filteredParkings = filteredParkings.where((spot) {
+                  if (spot.latitude == 0 && spot.longitude == 0) {
+                    print("DEBUG: Skipping ${spot.name} - No Coords (0,0)");
+                    return false;
+                  }
+
+                  double distance = _calculateDistance(
+                    _selectedArea!.latitude,
+                    _selectedArea!.longitude,
+                    spot.latitude,
+                    spot.longitude,
+                  );
+
+                  bool isNear = distance <= 5.0; // Reverted to 5 km
+                  print(
+                    "DEBUG: Checking ${spot.name} (${spot.latitude}, ${spot.longitude}) -> Dist: ${distance.toStringAsFixed(2)} km -> Visible: $isNear",
+                  );
+                  return isNear;
+                }).toList();
+              }
+
+              // Use first 3 for home screen
 
               // Use first 3 for home screen
               final displayParkings = filteredParkings.take(3).toList();
@@ -242,20 +326,49 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
+              // Filtered list for "See All"
               Expanded(
                 child: StreamBuilder<List<ParkingSpot>>(
                   stream: _parkingService.getParkingSpots(),
                   builder: (context, snapshot) {
-                    if (!snapshot.hasData)
+                    if (!snapshot.hasData) {
                       return const Center(child: CircularProgressIndicator());
-                    final parkings = snapshot.data!;
-                    // Filter out the first 3 that are shown on home screen
-                    final otherParkings = parkings.skip(3).toList();
+                    }
+                    var parkings = snapshot.data!;
+
+                    // Apply SAME filters as Home Screen
+                    if (_selectedVehicleIndex != -1) {
+                      final category =
+                          _vehicleCategories[_selectedVehicleIndex];
+                      final selectedVehicleTypeKey =
+                          (category['name'] as String).toLowerCase();
+                      parkings = parkings.where((spot) {
+                        final vData = spot.vehicles[selectedVehicleTypeKey];
+                        return vData != null && vData.slots > 0;
+                      }).toList();
+                    }
+
+                    if (_selectedArea != null) {
+                      parkings = parkings.where((spot) {
+                        double distance = _calculateDistance(
+                          _selectedArea!.latitude,
+                          _selectedArea!.longitude,
+                          spot.latitude,
+                          spot.longitude,
+                        );
+                        return distance <= 5.0; // 5 km radius
+                      }).toList();
+                    }
+
+                    // Filter out the first 3 that are shown on home screen based on the filtered list
+                    final otherParkings = parkings.length > 3
+                        ? parkings.skip(3).toList()
+                        : <ParkingSpot>[];
 
                     if (otherParkings.isEmpty) {
                       return Center(
                         child: Text(
-                          "No more spots available",
+                          "No more spots available nearby",
                           style: GoogleFonts.outfit(color: Colors.grey),
                         ),
                       );
@@ -265,7 +378,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       controller: scrollController,
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       itemCount: otherParkings.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 20),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 20),
                       itemBuilder: (context, index) =>
                           _buildParkingCard(otherParkings[index]),
                     );
@@ -311,7 +425,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -369,7 +483,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? []
                   : [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -415,7 +529,7 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -442,7 +556,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title row (Price removed as requested)
+                  // Title row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -513,6 +627,78 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+
+                  // Facilities Row
+                  if (parking.facilities.isNotEmpty) ...[
+                    SizedBox(
+                      height: 24,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: parking.facilities.split(',').map((f) {
+                          final facility = f.trim();
+                          if (facility.isEmpty) return const SizedBox.shrink();
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                facility,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 10,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Vehicles Row (Icons)
+                  if (parking.vehicles.isNotEmpty) ...[
+                    Row(
+                      children: parking.vehicles.entries
+                          .where((e) => e.value.slots > 0)
+                          .map((e) {
+                            IconData icon;
+                            switch (e.key.toLowerCase()) {
+                              case 'bike':
+                                icon = Icons.two_wheeler;
+                                break;
+                              case 'ev':
+                                icon = Icons.electric_car;
+                                break;
+                              case 'suv':
+                                icon = Icons.directions_car;
+                                break;
+                              case 'hatchback':
+                                icon = Icons.directions_car_filled;
+                                break;
+                              default:
+                                icon = Icons.local_taxi;
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: Icon(
+                                icon,
+                                size: 16,
+                                color: Colors.grey.shade600,
+                              ),
+                            );
+                          })
+                          .toList(),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -530,8 +716,8 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(40),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(
-              0.1,
+            color: Colors.black.withValues(
+              alpha: 0.05,
             ), // Adjusted shadow for white bg
             blurRadius: 20,
             offset: const Offset(0, 5),
@@ -606,5 +792,144 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  final LayerLink _layerLink = LayerLink();
+  OverlayEntry? _overlayEntry;
+
+  void _showOverlay(Widget child) {
+    _overlayEntry?.remove();
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          // Transparent dismissible background
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _closeOverlay,
+              behavior: HitTestBehavior.translucent,
+              // Dimmed background
+              child: Container(color: Colors.black54),
+            ),
+          ),
+          // Positioned Popup
+          CompositedTransformFollower(
+            link: _layerLink,
+            offset: const Offset(0, 50), // Position below the button
+            showWhenUnlinked: false,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                constraints: const BoxConstraints(
+                  maxWidth: 300,
+                  maxHeight: 400,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: child,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _closeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  void _showCitySelection() {
+    _showOverlay(
+      StreamBuilder<List<City>>(
+        stream: _locationService.getCities(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          }
+
+          final cities = snapshot.data ?? [];
+          if (cities.isEmpty) {
+            return const Center(child: Text("No cities found"));
+          }
+
+          return CitySelectionPopup(
+            cities: cities,
+            onClose: _closeOverlay,
+            onCitySelected: (city) {
+              setState(() {
+                _selectedCity = city;
+                _selectedArea = null;
+              });
+              _closeOverlay();
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _showAreaSelection(city);
+              });
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  void _showAreaSelection(City city) {
+    _showOverlay(
+      StreamBuilder<List<Area>>(
+        stream: _locationService.getAreas(city.id),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          }
+
+          final areas = snapshot.data ?? [];
+          // Note: Even if empty, we might want to show popup so user can see "No areas found"
+
+          return AreaSelectionPopup(
+            city: city,
+            areas: areas,
+            onClose: _closeOverlay,
+            onAreaSelected: (area) {
+              setState(() {
+                _selectedArea = area;
+              });
+              _closeOverlay();
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  // Haversine formula to calculate distance in KM
+  double _calculateDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    var p = 0.017453292519943295;
+    var c = cos;
+    var a =
+        0.5 -
+        c((lat2 - lat1) * p) / 2 +
+        c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p)) / 2;
+    return 12742 * asin(sqrt(a));
   }
 }

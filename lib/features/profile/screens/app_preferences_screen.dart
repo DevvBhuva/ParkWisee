@@ -299,7 +299,11 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
               ),
             ],
           ),
-          Switch(value: value, onChanged: onChanged, activeColor: Colors.black),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: Colors.black,
+          ),
         ],
       ),
     );
@@ -324,7 +328,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
           border: Border.all(color: Colors.grey.shade100),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
+              color: Colors.black.withValues(alpha: 0.02),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -383,7 +387,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
           border: Border.all(color: Colors.grey.shade100),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
+              color: Colors.black.withValues(alpha: 0.02),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),

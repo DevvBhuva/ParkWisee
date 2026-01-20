@@ -13,6 +13,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parkwise/features/parking/services/local_booking_service.dart';
 import 'package:parkwise/features/notifications/services/notification_service.dart';
 import 'package:parkwise/features/notifications/models/notification_model.dart';
+import 'package:parkwise/features/parking/services/cashfree_service.dart'; // Added
 import 'dart:convert';
 
 class BookingSummaryScreen extends StatefulWidget {
@@ -48,7 +49,92 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
   final BookingFirestoreService _bookingService = BookingFirestoreService();
   final LocalBookingService _localBookingService = LocalBookingService();
 
+  // Special object for Cashfree
+  final PaymentMethod _cashfreeMethod = PaymentMethod(
+    id: 'cashfree_gateway',
+    category: 'Cashfree',
+    type: 'GATEWAY',
+    maskedNumber: 'UPI / Cards / NetBanking',
+  );
+
   PaymentMethod? _selectedPaymentMethod;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedPaymentMethod = _cashfreeMethod;
+  }
+
+  /// Handles the actual creation of booking in Firestore after payment or if saved card used.
+  Future<void> _processBooking(String paymentId, String paymentType) async {
+    print('>>> STARTING BOOKING PROCESS: $paymentId');
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please login to book')));
+      return;
+    }
+
+    final bookingId = const Uuid().v4();
+    final qrDataMap = {
+      'bid': bookingId,
+      'sid': widget.spot.id,
+      'slot': widget.slotId + 1,
+      'veh': widget.licensePlate,
+      'time': widget.startTime.toIso8601String(),
+    };
+    final qrDataJson = jsonEncode(qrDataMap);
+
+    final newBooking = Booking(
+      id: bookingId,
+      userId: user.uid,
+      parkingSpotId: widget.spot.id,
+      spotName: widget.spot.name,
+      spotAddress: widget.spot.address,
+      slotId: widget.slotId,
+      vehicleId: widget.vehicleType,
+      vehicleModel: widget.vehicleModel,
+      vehicleNumber: widget.licensePlate,
+      startTime: widget.startTime,
+      endTime: widget.startTime.add(
+        Duration(minutes: (widget.duration * 60).toInt()),
+      ),
+      totalPrice: widget.totalPrice,
+      status: 'confirmed',
+      createdAt: DateTime.now(),
+      qrData: qrDataJson,
+      paymentMethodId: paymentId,
+      paymentMethodType: paymentType,
+    );
+
+    try {
+      await _bookingService.createBooking(newBooking);
+      // Create Notification
+      try {
+        await NotificationService().createNotification(
+          title: 'Parking Confirmed',
+          body: 'Your slot at ${widget.spot.name} is reserved.',
+          type: NotificationType.confirmation,
+          relatedBookingId: newBooking.id,
+        );
+      } catch (e) {
+        debugPrint('Notif Error: $e');
+      }
+    } catch (e) {
+      print('>>> CRITICAL BOOKING ERROR: $e');
+      print('>>> Saving locally as fallback...');
+      await _localBookingService.saveBooking(newBooking);
+    }
+
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TicketScreen(booking: newBooking),
+      ),
+    );
+  }
 
   String _formatDateTime(DateTime dt) {
     return DateFormat('EEE, MMM d • h:mm a').format(dt);
@@ -208,7 +294,8 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final methods = snapshot.data ?? [];
+                // Combine explicit Cashfree option with saved methods
+                final methods = [_cashfreeMethod, ...(snapshot.data ?? [])];
 
                 return Column(
                   children: [
@@ -241,12 +328,25 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                           ),
                           child: Row(
                             children: [
-                              Icon(
-                                method.type == 'UPI'
-                                    ? Icons.qr_code
-                                    : Icons.credit_card,
-                                color: Colors.black87,
-                              ),
+                              if (method.id == 'cashfree_gateway')
+                                Image.asset(
+                                  'assets/images/cashfree_logo.png',
+                                  width: 32, // Adjust size as needed
+                                  height: 32,
+                                  errorBuilder: (c, e, s) => const Icon(
+                                    Icons.payment,
+                                    color: Colors.purple,
+                                  ),
+                                )
+                              else
+                                Icon(
+                                  method.type == 'GATEWAY'
+                                      ? Icons.payment
+                                      : (method.type == 'UPI'
+                                            ? Icons.qr_code
+                                            : Icons.credit_card),
+                                  color: Colors.black87,
+                                ),
                               const SizedBox(width: 16),
                               Expanded(
                                 child: Column(
@@ -370,93 +470,50 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                 : SlideToBookButton(
                     label:
                         'Slide to Pay \u20B9${widget.totalPrice.toStringAsFixed(0)}',
-                    completionLabel: 'Booked Slot',
+                    completionLabel: 'Processing...',
                     onCompleted: () async {
-                      print('>>> SLIDE COMPLETED: STARTING BOOKING PROCESS');
-                      final user = FirebaseAuth.instance.currentUser;
-                      if (user == null) {
-                        print('>>> ERROR: User is null');
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please login to book')),
-                        );
-                        return;
-                      }
+                      if (_selectedPaymentMethod == null) return;
 
-                      final bookingId = const Uuid().v4();
-                      print('>>> Generated Booking ID: $bookingId');
+                      // 1. If Cashfree Gateway
+                      if (_selectedPaymentMethod!.id == 'cashfree_gateway') {
+                        final user = FirebaseAuth.instance.currentUser;
+                        final orderId =
+                            "ORDER_${DateTime.now().millisecondsSinceEpoch}";
 
-                      // Generate QR Data
-                      final qrDataMap = {
-                        'bid': bookingId,
-                        'sid': widget.spot.id,
-                        'slot': widget.slotId + 1,
-                        'veh': widget.licensePlate,
-                        'time': widget.startTime.toIso8601String(),
-                      };
-                      final qrDataJson = jsonEncode(qrDataMap);
+                        print(">>> Initiating Cashfree Payment: $orderId");
 
-                      final newBooking = Booking(
-                        id: bookingId,
-                        userId: user.uid,
-                        parkingSpotId: widget.spot.id,
-                        spotName: widget.spot.name,
-                        spotAddress: widget.spot.address,
-                        slotId: widget.slotId,
-                        vehicleId: widget
-                            .vehicleType, // Corrected: Use category key ('car') not model
-                        vehicleModel: widget
-                            .vehicleModel, // Pass model separately if needed (requires model update) or just keep using vehicleNumber for details
-                        vehicleNumber: widget.licensePlate,
-                        startTime: widget.startTime,
-                        endTime: widget.startTime.add(
-                          Duration(minutes: (widget.duration * 60).toInt()),
-                        ),
-                        totalPrice: widget.totalPrice,
-                        status: 'confirmed',
-                        createdAt: DateTime.now(),
-                        qrData: qrDataJson,
-                        paymentMethodId: _selectedPaymentMethod?.id,
-                        paymentMethodType: _selectedPaymentMethod?.category,
-                      );
-
-                      try {
-                        print(
-                          '>>> Calling BookingFirestoreService.createBooking...',
-                        );
-                        await _bookingService.createBooking(newBooking);
-                        print('>>> BookingFS Success!');
-
-                        // Create Notification
-                        try {
-                          await NotificationService().createNotification(
-                            title: 'Parking Confirmed',
-                            body:
-                                'Your slot at ${widget.spot.name} is reserved from ${DateFormat('HH:mm').format(newBooking.startTime)}–${DateFormat('HH:mm').format(newBooking.endTime)}.',
-                            type: NotificationType.confirmation,
-                            relatedBookingId: newBooking.id,
-                          );
-                        } catch (e) {
-                          debugPrint('Notif Error: $e');
+                        // Fallback values
+                        String phone = "+919999999999";
+                        if (user?.phoneNumber != null &&
+                            user!.phoneNumber!.isNotEmpty) {
+                          phone = user.phoneNumber!;
                         }
-                      } catch (e) {
-                        // Failsafe: Navigate even if permission denied
-                        print('>>> CRITICAL BOOKING ERROR: $e');
 
-                        // Save locally
-                        print('>>> Saving locally as fallback...');
-                        await _localBookingService.saveBooking(newBooking);
+                        await CashfreeService().doPayment(
+                          orderId: orderId,
+                          amount: widget.totalPrice,
+                          customerPhone: phone,
+                          customerEmail: user?.email ?? "guest@parkwise.com",
+                          userId:
+                              user?.uid ?? const Uuid().v4(), // Safe fallback
+                          onVerify: (verifiedOrderId) {
+                            print(">>> Payment Verified: $verifiedOrderId");
+                            _processBooking(verifiedOrderId, 'CASHFREE');
+                          },
+                          onError: (error, id) {
+                            print(">>> Payment Failed: $error");
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Payment Failed: $error')),
+                            );
+                          },
+                        );
+                      } else {
+                        // 2. Offline/Saved Method
+                        await _processBooking(
+                          _selectedPaymentMethod!.id,
+                          _selectedPaymentMethod!.type,
+                        );
                       }
-
-                      if (!mounted) return;
-
-                      // Navigate to Ticket Screen
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              TicketScreen(booking: newBooking),
-                        ),
-                      );
                     },
                   ),
           ),

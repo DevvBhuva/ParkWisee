@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:parkwise/core/theme/app_colors.dart';
 import 'package:parkwise/core/widgets/custom_background.dart';
 import 'package:parkwise/core/utils/validators.dart';
-import 'package:parkwise/features/auth/screens/signup_screen.dart';
+
 import 'package:parkwise/features/home/screens/home_screen.dart';
 import 'package:parkwise/features/auth/services/auth_service.dart';
 
