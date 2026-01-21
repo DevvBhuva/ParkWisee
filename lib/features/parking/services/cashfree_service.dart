@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfwebcheckoutpayment.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfpaymentgateway/cfpaymentgatewayservice.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
 import 'package:flutter_cashfree_pg_sdk/utils/cfenums.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -31,6 +32,7 @@ class CashfreeService {
     required Function(String errorMsg, String orderId) onError,
   }) async {
     try {
+      debugPrint("Creating order session for amount: $amount");
       // 1. Create Session ID from Backend (or here directly for testing)
       final sessionData = await _createOrderSession(
         orderId: orderId,
@@ -40,12 +42,13 @@ class CashfreeService {
         userId: userId, // Pass it
       );
 
-      print(">>> Cashfree API Response: $sessionData");
+      debugPrint(">>> Cashfree API Response: $sessionData");
 
       final String paymentSessionId = sessionData['payment_session_id'];
       final String orderIdFromResponse = sessionData['order_id'];
 
-      print(
+      debugPrint('Session ID created: $paymentSessionId');
+      debugPrint(
         ">>> Building CFSession with ID: $paymentSessionId, OrderID: $orderIdFromResponse",
       );
 
@@ -56,31 +59,34 @@ class CashfreeService {
           .setPaymentSessionId(paymentSessionId)
           .build();
 
-      print(">>> CFSession Built Successfully");
+      debugPrint('Environment: SANDBOX');
+      debugPrint('CF Session: $cfSession');
+      debugPrint(">>> CFSession Built Successfully");
 
       // 3. Initiate Payment
       var cfWebCheckout = CFWebCheckoutPaymentBuilder()
           .setSession(cfSession)
           .build();
 
-      print(">>> CFWebCheckout Built Successfully. Setting Callback...");
+      debugPrint('CF Payment: $cfWebCheckout');
+      debugPrint(">>> CFWebCheckout Built Successfully. Setting Callback...");
 
       // 4. Set Callbacks
       _cfPaymentGatewayService.setCallback(
         (String orderId) {
-          print("Cashfree Payment Verified: $orderId");
+          debugPrint('Payment Verified: $orderId');
           onVerify(orderId);
         },
         (CFErrorResponse errorResponse, String orderId) {
-          print("Cashfree Payment Failed: ${errorResponse.getMessage()}");
+          debugPrint('Payment Failed/Error: ${errorResponse.getMessage()}');
           onError(errorResponse.getMessage() ?? "Unknown Error", orderId);
         },
       );
 
-      print(">>> Invoking doPayment...");
+      debugPrint(">>> Invoking doPayment...");
       _cfPaymentGatewayService.doPayment(cfWebCheckout);
     } catch (e) {
-      print("Cashfree Error: $e");
+      debugPrint("Cashfree Error: $e");
       onError("Session Creation Failed: $e", orderId);
     }
   }
@@ -132,16 +138,18 @@ class CashfreeService {
     });
 
     try {
-      print(">>> Creating Cashfree Order: $url");
+      debugPrint(">>> Creating Cashfree Order: $url");
       final response = await http.post(
         Uri.parse(url),
         headers: headers,
         body: body,
       );
 
-      print(">>> Cashfree Response: ${response.statusCode} - ${response.body}");
+      debugPrint('API Response Status: ${response.statusCode}');
+      debugPrint('API Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
+        debugPrint("Response Body: ${response.body}");
         return jsonDecode(response.body);
       } else {
         // Try to parse error message from body
@@ -153,7 +161,7 @@ class CashfreeService {
         throw Exception("API Error: $errorMsg");
       }
     } catch (e) {
-      print("Cashfree Exception: $e");
+      debugPrint("Cashfree Exception: $e");
       rethrow;
     }
   }

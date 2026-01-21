@@ -9,7 +9,7 @@ import 'package:parkwise/features/parking/services/local_booking_service.dart';
 import 'package:parkwise/features/parking/screens/ticket_screen.dart';
 
 class BookingsScreen extends StatefulWidget {
-  const BookingsScreen({Key? key}) : super(key: key);
+  const BookingsScreen({super.key});
 
   @override
   State<BookingsScreen> createState() => _BookingsScreenState();
@@ -157,7 +157,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                   ? []
                   : [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -195,9 +195,16 @@ class _BookingsScreenState extends State<BookingsScreen> {
                               : Colors.black,
                         ),
                       ),
+                      Text(
+                        DateFormat('MMM d, h:mm a').format(booking.startTime),
+                        style: GoogleFonts.outfit(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
                       const SizedBox(height: 4),
                       Text(
-                        '${DateFormat('MMM d, h:mm a').format(booking.startTime)}',
+                        'Duration: ${booking.endTime.difference(booking.startTime).inHours} hours',
                         style: GoogleFonts.outfit(
                           color: Colors.grey.shade600,
                           fontSize: 14,

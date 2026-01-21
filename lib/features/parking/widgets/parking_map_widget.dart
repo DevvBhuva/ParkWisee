@@ -98,6 +98,7 @@ class _ParkingMapWidgetState extends State<ParkingMapWidget> {
       _loadParkingSpots();
 
       // 5. Handle Marker Taps
+      // ignore: deprecated_member_use
       manager.addOnPointAnnotationClickListener(
         AnnotationClickListener(
           onAnnotationClick: (annotation) {
@@ -120,13 +121,13 @@ class _ParkingMapWidgetState extends State<ParkingMapWidget> {
     _spotsSubscription = _parkingService.getParkingSpots().listen(
       (spots) {
         if (kDebugMode) {
-          print("Loaded ${spots.length} parking spots from Firestore.");
+          debugPrint("Loaded ${spots.length} parking spots from Firestore.");
         }
         _updateMarkers(spots);
       },
       onError: (e) {
         if (kDebugMode) {
-          print("Error loading parking spots: $e");
+          debugPrint("Error loading parking spots: $e");
         }
       },
     );
@@ -174,7 +175,7 @@ class _ParkingMapWidgetState extends State<ParkingMapWidget> {
       }
     } catch (e) {
       if (kDebugMode) {
-        print("Error creating annotations: $e");
+        debugPrint("Error creating annotations: $e");
       }
     }
   }
@@ -306,7 +307,7 @@ class _ParkingMapWidgetState extends State<ParkingMapWidget> {
                 geometry: LineString(
                   coordinates: points.map((p) => p.coordinates).toList(),
                 ),
-                lineColor: Colors.blue.value,
+                lineColor: Colors.blue.toARGB32(),
                 lineWidth: 5.0,
                 lineJoin: LineJoin.ROUND,
               ),
@@ -344,7 +345,7 @@ class _ParkingMapWidgetState extends State<ParkingMapWidget> {
       }
     } catch (e) {
       if (kDebugMode) {
-        print("Error starting navigation: $e");
+        debugPrint("Error starting navigation: $e");
       }
     }
   }
@@ -409,9 +410,9 @@ class _InfoBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -430,6 +431,7 @@ class _InfoBadge extends StatelessWidget {
   }
 }
 
+// ignore: deprecated_member_use
 class AnnotationClickListener extends OnPointAnnotationClickListener {
   final Function(PointAnnotation) onAnnotationClick;
 

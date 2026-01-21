@@ -10,10 +10,10 @@ class VehicleDetailsDialog extends StatefulWidget {
   final Function(String, String) onProceed;
 
   const VehicleDetailsDialog({
-    Key? key,
+    super.key,
     required this.vehicleType,
     required this.onProceed,
-  }) : super(key: key);
+  });
 
   @override
   State<VehicleDetailsDialog> createState() => _VehicleDetailsDialogState();
@@ -122,7 +122,7 @@ class _VehicleDetailsDialogState extends State<VehicleDetailsDialog> {
                               value: v.id,
                               child: Text('${v.name} (${v.licensePlate})'),
                             );
-                          }).toList(),
+                          }),
                         ],
                         onChanged: (val) {
                           if (val == null) {

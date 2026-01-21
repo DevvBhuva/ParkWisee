@@ -22,7 +22,7 @@ class ParkingFirestoreService {
           debugPrint("DEBUG: Error parsing ${doc.id}: $e");
           debugPrint(stack.toString());
           // Return a placeholder or rethrow to ensure we see the failure
-          throw e;
+          rethrow;
         }
       }).toList();
     });
@@ -38,14 +38,14 @@ class ParkingFirestoreService {
       final snapshot = await _firestore
           .collection('parkings')
           .where('parking_name', isGreaterThanOrEqualTo: query)
-          .where('parking_name', isLessThan: query + 'z')
+          .where('parking_name', isLessThan: '${query}z')
           .get();
 
       return snapshot.docs
           .map((doc) => ParkingSpot.fromFirestore(doc))
           .toList();
     } catch (e) {
-      print("Error searching firestore: $e");
+      debugPrint('Error checking/seeding parkings: $e');
       return [];
     }
   }
@@ -56,8 +56,9 @@ class ParkingFirestoreService {
 
   Future<void> batchAddParkingSpots(List<ParkingSpot> spots) async {
     final batch = _firestore.batch();
-    for (var spot in spots) {
-      final docRef = _firestore.collection('parkings').doc();
+    for (var i = 0; i < spots.length; i++) {
+      final spot = spots[i];
+      final docRef = _firestore.collection('parkings').doc('p${i + 1}');
       batch.set(docRef, spot.toMap());
     }
     await batch.commit();

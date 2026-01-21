@@ -152,7 +152,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
           return ListView.separated(
             padding: const EdgeInsets.all(24),
             itemCount: methods.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 16),
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final method = methods[index];
               return _buildPaymentCard(method);
@@ -185,7 +185,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),

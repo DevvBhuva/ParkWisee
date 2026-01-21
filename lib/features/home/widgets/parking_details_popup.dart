@@ -53,8 +53,11 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
           try {
             // Update the parking object with new data
             displayParking = ParkingSpot.fromFirestore(snapshot.data!);
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
           } catch (e) {
-            print('Error parsing real-time update: $e');
+            debugPrint('Error creating favorite: $e');
             // Fallback to widget.parking
           }
         }
@@ -76,7 +79,7 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
               // Header Image
               Stack(
                 children: [
-                  Container(
+                  SizedBox(
                     height: 200,
                     width: double.infinity,
                     child: ClipRRect(
@@ -129,6 +132,7 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
@@ -136,7 +140,6 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                             ),
                             decoration: BoxDecoration(
                               color: Colors.green.shade50,
-                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               children: [
@@ -331,7 +334,7 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                             ),
                           ),
                         );
-                      }).toList(),
+                      }),
 
                       const SizedBox(height: 80), // Space for bottom slider
                     ],
@@ -349,7 +352,7 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                     color: Colors.white,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 20,
                         offset: const Offset(0, -5),
                       ),
@@ -471,11 +474,12 @@ class _SlideToBookButtonState extends State<_SlideToBookButton> {
                         // If we want to reset:
                         if (mounted) {
                           Future.delayed(const Duration(milliseconds: 500), () {
-                            if (mounted)
+                            if (mounted) {
                               setState(() {
                                 _dragValue = 0.0;
                                 _isCompleted = false;
                               });
+                            }
                           });
                         }
                       });

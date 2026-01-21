@@ -13,6 +13,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parkwise/features/parking/services/local_booking_service.dart';
 import 'package:parkwise/features/notifications/services/notification_service.dart';
 import 'package:parkwise/features/notifications/models/notification_model.dart';
+import 'package:parkwise/features/notifications/services/local_notification_service.dart';
 import 'package:parkwise/features/parking/services/cashfree_service.dart'; // Added
 import 'dart:convert';
 
@@ -28,7 +29,7 @@ class BookingSummaryScreen extends StatefulWidget {
   final String vehicleType; // Added: 'car', 'bike', etc.
 
   const BookingSummaryScreen({
-    Key? key,
+    super.key,
     required this.spot,
     required this.slotId,
     required this.startTime,
@@ -38,7 +39,7 @@ class BookingSummaryScreen extends StatefulWidget {
     required this.licensePlate,
     required this.hourlyRate,
     required this.vehicleType,
-  }) : super(key: key);
+  });
 
   @override
   State<BookingSummaryScreen> createState() => _BookingSummaryScreenState();
@@ -67,7 +68,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
 
   /// Handles the actual creation of booking in Firestore after payment or if saved card used.
   Future<void> _processBooking(String paymentId, String paymentType) async {
-    print('>>> STARTING BOOKING PROCESS: $paymentId');
+    debugPrint('>>> STARTING BOOKING PROCESS: $paymentId');
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(
@@ -121,9 +122,18 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
       } catch (e) {
         debugPrint('Notif Error: $e');
       }
+
+      // Schedule System Notifications
+      try {
+        await LocalNotificationService().scheduleBookingNotifications(
+          newBooking,
+        );
+      } catch (e) {
+        debugPrint('Local Notif Error: $e');
+      }
     } catch (e) {
-      print('>>> CRITICAL BOOKING ERROR: $e');
-      print('>>> Saving locally as fallback...');
+      debugPrint('>>> CRITICAL BOOKING ERROR: $e');
+      debugPrint('>>> Saving locally as fallback...');
       await _localBookingService.saveBooking(newBooking);
     }
 
@@ -320,7 +330,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
+                                color: Colors.black.withValues(alpha: 0.05),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -386,7 +396,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                           ),
                         ),
                       );
-                    }).toList(),
+                    }),
 
                     // Add New Method Option (Simple visual for now)
                     GestureDetector(
@@ -480,7 +490,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                         final orderId =
                             "ORDER_${DateTime.now().millisecondsSinceEpoch}";
 
-                        print(">>> Initiating Cashfree Payment: $orderId");
+                        debugPrint(">>> Initiating Cashfree Payment: $orderId");
 
                         // Fallback values
                         String phone = "+919999999999";
@@ -497,11 +507,13 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                           userId:
                               user?.uid ?? const Uuid().v4(), // Safe fallback
                           onVerify: (verifiedOrderId) {
-                            print(">>> Payment Verified: $verifiedOrderId");
+                            debugPrint(
+                              ">>> Payment Verified: $verifiedOrderId",
+                            );
                             _processBooking(verifiedOrderId, 'CASHFREE');
                           },
                           onError: (error, id) {
-                            print(">>> Payment Failed: $error");
+                            debugPrint(">>> Payment Failed: $error");
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text('Payment Failed: $error')),
                             );
@@ -542,7 +554,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
       borderRadius: BorderRadius.circular(16),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.05),
+          color: Colors.black.withValues(alpha: 0.05),
           blurRadius: 10,
           offset: const Offset(0, 4),
         ),

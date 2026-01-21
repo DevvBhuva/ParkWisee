@@ -6,6 +6,9 @@ import 'package:parkwise/features/auth/screens/welcome_screen.dart';
 import 'package:parkwise/features/home/screens/home_screen.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:parkwise/features/notifications/services/local_notification_service.dart';
+
+import 'package:parkwise/features/notifications/services/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,8 +17,14 @@ void main() async {
     // For Android, this will automatically use the google-services.json file
     // that we added to android/app/
     await Firebase.initializeApp();
+
+    // Initialize System Notifications
+    await LocalNotificationService().initialize();
+
+    // Initialize FCM
+    await FCMService().initialize();
   } catch (e) {
-    debugPrint("Firebase Initialization failed: $e");
+    debugPrint("Firebase/Notification Initialization failed: $e");
   }
 
   // Check if user is already logged in

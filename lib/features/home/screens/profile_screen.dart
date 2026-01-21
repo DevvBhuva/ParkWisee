@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parkwise/features/auth/services/auth_service.dart';
-import 'package:parkwise/features/auth/screens/welcome_screen.dart';
+import 'package:parkwise/features/auth/screens/login_screen.dart';
 import 'package:parkwise/features/profile/screens/my_vehicles_screen.dart';
 import 'package:parkwise/features/profile/screens/payment_methods_screen.dart';
 import 'package:parkwise/features/profile/screens/saved_locations_screen.dart';
@@ -118,7 +119,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final cardColor = isDark ? Colors.grey.shade900 : Colors.white;
     final shadowColor = isDark
         ? Colors.transparent
-        : Colors.black.withOpacity(0.05);
+        : Colors.black.withValues(alpha: 0.05);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -209,7 +210,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.05,
+                                      ),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4),
                                     ),
@@ -477,11 +480,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: ElevatedButton(
                       onPressed: () async {
                         await _authService.signOut();
-                        if (mounted) {
+                        await FirebaseAuth.instance.signOut();
+                        if (context.mounted) {
                           Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const WelcomeScreen(),
+                              builder: (context) => const LoginScreen(),
                             ),
                             (route) => false,
                           );

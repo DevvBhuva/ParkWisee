@@ -162,7 +162,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           Card(
                             color: const Color(0xFFFAFAFA), // Off-white
                             elevation: 8,
-                            shadowColor: Colors.black.withOpacity(0.1),
+                            shadowColor: Colors.black.withValues(alpha: 0.1),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(24),
                             ),

@@ -12,14 +12,14 @@ class CircularDurationSlider extends StatefulWidget {
   final Color inactiveColor;
 
   const CircularDurationSlider({
-    Key? key,
+    super.key,
     required this.value,
     this.min = 0,
     this.max = 24,
     required this.onChanged,
     this.activeColor = const Color(0xFF00C853),
     this.inactiveColor = const Color(0xFFE0E0E0),
-  }) : super(key: key);
+  });
 
   @override
   State<CircularDurationSlider> createState() => _CircularDurationSliderState();

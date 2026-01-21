@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async'; // Added for Timer
 import 'package:google_fonts/google_fonts.dart';
 import 'package:parkwise/features/home/widgets/parking_details_popup.dart';
 
@@ -12,12 +13,14 @@ import 'package:parkwise/features/notifications/widgets/notification_popup.dart'
 import 'package:parkwise/features/navigation/screens/navigation_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parkwise/features/parking/services/booking_firestore_service.dart';
+import 'package:parkwise/features/parking/models/booking_model.dart'; // Added for Booking type
+
 import 'package:parkwise/features/home/models/location_model.dart';
 import 'package:parkwise/features/home/services/location_service.dart';
+import 'package:parkwise/features/notifications/services/local_notification_service.dart'; // Added
 import 'package:parkwise/features/home/widgets/location_header_button.dart';
 import 'package:parkwise/features/home/widgets/city_selection_popup.dart';
 import 'package:parkwise/features/home/widgets/area_selection_popup.dart';
-import 'dart:math' show cos, sqrt, asin;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,6 +35,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final ParkingFirestoreService _parkingService = ParkingFirestoreService();
   final BookingFirestoreService _bookingService = BookingFirestoreService();
 
+  Timer? _cleanupTimer; // Added
+
   // Location State
   final LocationService _locationService = LocationService();
   City? _selectedCity;
@@ -41,19 +46,60 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _cleanupBookings();
-    // Initialize default location (Async now, so maybe we leave it or load user prefs)
-    // For now, we start with "Select Location" until user picks one.
+
+    // Run global cleanup periodically (every 60 seconds) to make it "dynamic"
+    _cleanupTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
+      _runGlobalCleanup();
+    });
   }
 
   Future<void> _cleanupBookings() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      // 1. Cleanup user's expired bookings
       await _bookingService.checkAndReleaseExpiredBookings(user.uid);
+
+      // 1b. Global cleanup
+      await _runGlobalCleanup();
+
+      // 2. Restore active bookings for Live Notifications (Realtime Timer)
+      final allBookingsStream = _bookingService.getBookingsStream(user.uid);
+      final allBookings = await allBookingsStream.first; // Get current snapshot
+
+      // Filter for active ones (confirmed and not end time passed)
+      final now = DateTime.now();
+      final active = allBookings
+          .where(
+            (b) =>
+                (b.status == 'confirmed' || b.status == 'booked') &&
+                b.endTime.isAfter(now),
+          )
+          .toList();
+
+      if (active.isNotEmpty) {
+        LocalNotificationService().restoreActiveBookings(active);
+      }
+    }
+  }
+
+  Future<void> _runGlobalCleanup() async {
+    // Global cleanup for all parking spots (Client-side sync)
+    // accessible to this user.
+    try {
+      final parkingsStream = _parkingService.getParkingSpots();
+      final parkings = await parkingsStream.first;
+      for (var spot in parkings) {
+        await _bookingService.checkAndReleaseExpiredBookingsForParking(spot.id);
+      }
+      debugPrint("Global cleanup executed.");
+    } catch (e) {
+      debugPrint("Global cleanup failed: $e");
     }
   }
 
   @override
   void dispose() {
+    _cleanupTimer?.cancel(); // Cancel the timer
     super.dispose();
   }
 
@@ -192,95 +238,99 @@ class _HomeScreenState extends State<HomeScreen> {
                 return const SizedBox.shrink();
               }
 
-              final allParkings = snapshot.data ?? [];
+              // NEW: Listen to active bookings stream for dynamic availability
+              return StreamBuilder<List<Booking>>(
+                stream: _bookingService.getAllActiveBookings(),
+                builder: (context, bookingSnapshot) {
+                  // We continue even if bookings are loading (assume 0 active) or error
+                  // Real-time updates will work when data arrives.
+                  final activeBookings = bookingSnapshot.data ?? [];
 
-              // Filter Parkings
-              // Filter Parkings
-              List<ParkingSpot> filteredParkings = allParkings;
-              String? selectedVehicleTypeKey;
-
-              if (_selectedVehicleIndex != -1) {
-                final category = _vehicleCategories[_selectedVehicleIndex];
-                selectedVehicleTypeKey = (category['name'] as String)
-                    .toLowerCase();
-
-                print("DEBUG: Filtering for Vehicle: $selectedVehicleTypeKey");
-
-                filteredParkings = allParkings.where((spot) {
-                  final vData = spot.vehicles[selectedVehicleTypeKey];
-
-                  if (vData == null) {
-                    print(
-                      "DEBUG: Hiding ${spot.name} - Vehicle '$selectedVehicleTypeKey' not supported. (Available: ${spot.vehicles.keys})",
-                    );
-                    return false;
-                  }
-                  if (vData.slots <= 0) {
-                    print(
-                      "DEBUG: Hiding ${spot.name} - No slots for '$selectedVehicleTypeKey'",
-                    );
-                    return false;
-                  }
-
-                  return true;
-                }).toList();
-              }
-
-              // Filter by Location (Distance) if an area is selected
-              if (_selectedArea != null) {
-                print(
-                  "DEBUG: Selected Area: ${_selectedArea!.name} (${_selectedArea!.latitude}, ${_selectedArea!.longitude})",
-                );
-
-                filteredParkings = filteredParkings.where((spot) {
-                  if (spot.latitude == 0 && spot.longitude == 0) {
-                    print("DEBUG: Skipping ${spot.name} - No Coords (0,0)");
-                    return false;
-                  }
-
-                  double distance = _calculateDistance(
-                    _selectedArea!.latitude,
-                    _selectedArea!.longitude,
-                    spot.latitude,
-                    spot.longitude,
+                  // Calculate Dynamic Availability
+                  // We create a NEW list of ParkingSpots with updated 'vehicles' map
+                  final allParkings = _mergeAvailability(
+                    snapshot.data ?? [],
+                    activeBookings,
                   );
 
-                  bool isNear = distance <= 5.0; // Reverted to 5 km
-                  print(
-                    "DEBUG: Checking ${spot.name} (${spot.latitude}, ${spot.longitude}) -> Dist: ${distance.toStringAsFixed(2)} km -> Visible: $isNear",
-                  );
-                  return isNear;
-                }).toList();
-              }
+                  // Filter Parkings
+                  List<ParkingSpot> filteredParkings = allParkings;
+                  String? selectedVehicleTypeKey;
 
-              // Use first 3 for home screen
+                  if (_selectedVehicleIndex != -1) {
+                    final category = _vehicleCategories[_selectedVehicleIndex];
+                    selectedVehicleTypeKey = (category['name'] as String)
+                        .toLowerCase();
 
-              // Use first 3 for home screen
-              final displayParkings = filteredParkings.take(3).toList();
+                    debugPrint(
+                      "DEBUG: Filtering for Vehicle: $selectedVehicleTypeKey",
+                    );
 
-              if (displayParkings.isEmpty && _selectedVehicleIndex != -1) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  child: Center(
-                    child: Text(
-                      "No parking spots found for ${_vehicleCategories[_selectedVehicleIndex]['name']}",
-                      style: GoogleFonts.outfit(color: Colors.grey),
-                    ),
-                  ),
-                );
-              }
+                    filteredParkings = allParkings.where((spot) {
+                      final vData = spot.vehicles[selectedVehicleTypeKey];
 
-              return ListView.separated(
-                physics: const NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                padding: EdgeInsets.zero,
-                itemCount: displayParkings.length,
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 20),
-                itemBuilder: (context, index) {
-                  return _buildParkingCard(
-                    displayParkings[index],
-                    selectedVehicleTypeKey,
+                      if (vData == null) {
+                        debugPrint(
+                          "DEBUG: Hiding ${spot.name} - Vehicle '$selectedVehicleTypeKey' not supported.",
+                        );
+                        return false;
+                      }
+                      // Check DYNAMICALLY CALCULATED slots
+                      if (vData.slots <= 0) {
+                        debugPrint(
+                          "DEBUG: Hiding ${spot.name} - No slots available (Total - Booked <= 0)",
+                        );
+                        return false;
+                      }
+
+                      return true;
+                    }).toList();
+                  }
+
+                  // Filter by Area Keyword if an area is selected
+                  if (_selectedArea != null) {
+                    final areaKeyword = _normalizeText(_selectedArea!.name);
+                    debugPrint(
+                      "DEBUG: Selected Area: ${_selectedArea!.name} -> Keyword: '$areaKeyword'",
+                    );
+
+                    if (areaKeyword.isNotEmpty) {
+                      filteredParkings = filteredParkings.where((spot) {
+                        final parkingText = _normalizeText(
+                          '${spot.name} ${spot.address}',
+                        );
+                        return parkingText.contains(areaKeyword);
+                      }).toList();
+                    }
+                  }
+
+                  final displayParkings = filteredParkings.take(3).toList();
+
+                  if (displayParkings.isEmpty && _selectedVehicleIndex != -1) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Center(
+                        child: Text(
+                          "No parking spots found for ${_vehicleCategories[_selectedVehicleIndex]['name']}",
+                          style: GoogleFonts.outfit(color: Colors.grey),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    physics: const NeverScrollableScrollPhysics(),
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    itemCount: displayParkings.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 20),
+                    itemBuilder: (context, index) {
+                      return _buildParkingCard(
+                        displayParkings[index],
+                        selectedVehicleTypeKey,
+                      );
+                    },
                   );
                 },
               );
@@ -349,15 +399,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     }
 
                     if (_selectedArea != null) {
-                      parkings = parkings.where((spot) {
-                        double distance = _calculateDistance(
-                          _selectedArea!.latitude,
-                          _selectedArea!.longitude,
-                          spot.latitude,
-                          spot.longitude,
-                        );
-                        return distance <= 5.0; // 5 km radius
-                      }).toList();
+                      final areaKeyword = _normalizeText(_selectedArea!.name);
+                      if (areaKeyword.isNotEmpty) {
+                        parkings = parkings.where((spot) {
+                          final parkingText = _normalizeText(
+                            '${spot.name} ${spot.address}',
+                          );
+                          return parkingText.contains(areaKeyword);
+                        }).toList();
+                      }
                     }
 
                     // Filter out the first 3 that are shown on home screen based on the filtered list
@@ -917,19 +967,98 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Haversine formula to calculate distance in KM
-  double _calculateDistance(
-    double lat1,
-    double lon1,
-    double lat2,
-    double lon2,
+  // Normalize text for keyword matching
+  String _normalizeText(String text) {
+    // 1. Lowercase
+    String normalized = text.toLowerCase();
+
+    // 2. Remove special characters (keep a-z, 0-9, and space)
+    normalized = normalized.replaceAll(RegExp(r'[^a-z0-9\s]'), '');
+
+    // 3. Remove ignore words
+    const ignoreWords = {
+      'road',
+      'street',
+      'st',
+      'avenue',
+      'ave',
+      'lane',
+      'ln',
+      'drive',
+      'dr',
+      'way',
+      'boulevard',
+      'blvd',
+    };
+
+    List<String> words = normalized.split(RegExp(r'\s+'));
+    words.removeWhere((w) => ignoreWords.contains(w) || w.isEmpty);
+
+    return words.join(' ');
+  }
+
+  // Merge static parking data (Total Slots) with active bookings to determine availability
+  List<ParkingSpot> _mergeAvailability(
+    List<ParkingSpot> parkings,
+    List<Booking> bookings,
   ) {
-    var p = 0.017453292519943295;
-    var c = cos;
-    var a =
-        0.5 -
-        c((lat2 - lat1) * p) / 2 +
-        c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p)) / 2;
-    return 12742 * asin(sqrt(a));
+    if (bookings.isEmpty) return parkings;
+
+    final now = DateTime.now();
+
+    return parkings.map((spot) {
+      // 1. Find bookings for this spot
+      final spotBookings = bookings
+          .where(
+            (b) =>
+                b.parkingSpotId == spot.id &&
+                (b.status == 'booked' || b.status == 'confirmed') &&
+                b.endTime.isAfter(now),
+          )
+          .toList();
+
+      // 2. Clone vehicles map to modify slots
+      final newVehicles = Map<String, VehicleData>.from(spot.vehicles);
+
+      for (var key in newVehicles.keys) {
+        final total =
+            newVehicles[key]!.slots; // Assumes DB 'slots' is Total Capacity
+        final price = newVehicles[key]!.price;
+
+        // Count usage
+        final usage = spotBookings.where((b) => b.vehicleId == key).length;
+
+        // Calculate Available
+        final available = total - usage;
+
+        // Update map
+        newVehicles[key] = VehicleData(price: price, slots: available);
+
+        debugPrint(
+          "DEBUG: ${spot.name} [$key] -> Total: $total, Used: $usage, Avail: $available",
+        );
+      }
+
+      // Return new ParkingSpot instance (manually copying fields since no copyWith)
+      return ParkingSpot(
+        id: spot.id,
+        name: spot.name,
+        address: spot.address,
+        pricePerHour: spot.pricePerHour,
+        rating: spot.rating,
+        latitude: spot.latitude,
+        longitude: spot.longitude,
+        imageUrl: spot.imageUrl,
+        totalSpots: spot.totalSpots,
+        availableSpots: spot
+            .availableSpots, // Kept as original, but 'vehicles' map has logic
+        facilities: spot.facilities,
+        vehicles: newVehicles,
+        isOpen: spot.isOpen,
+        reviewCount: spot.reviewCount,
+        openTime: spot.openTime,
+        closeTime: spot.closeTime,
+      );
+    }).toList();
   }
 }

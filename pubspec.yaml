@@ -61,6 +61,9 @@ dependencies:
   location: ^8.0.1
   http: ^1.6.0
   flutter_cashfree_pg_sdk: ^2.2.0
+  flutter_local_notifications: ^19.5.0
+  timezone: ^0.10.1
+  firebase_messaging: ^15.2.10
 
 dev_dependencies:
   flutter_test:

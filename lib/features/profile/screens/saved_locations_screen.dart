@@ -155,7 +155,7 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
           return ListView.separated(
             padding: const EdgeInsets.all(24),
             itemCount: locations.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 16),
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final loc = locations[index];
               return _buildLocationCard(loc);
@@ -179,7 +179,7 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),

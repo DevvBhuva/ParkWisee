@@ -168,7 +168,8 @@ class _ExportHistoryDialogState extends State<ExportHistoryDialog> {
                   ),
                 ),
                 pw.SizedBox(height: 20),
-                pw.Table.fromTextArray(
+                pw.TableHelper.fromTextArray(
+                  context: context,
                   border: null,
                   headers: ['Date', 'Spot Name', 'Vehicle', 'Time', 'Price'],
                   data: filteredItems.map((item) {

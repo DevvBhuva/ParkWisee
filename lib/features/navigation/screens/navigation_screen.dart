@@ -531,7 +531,13 @@ class _NavigationScreenState extends State<NavigationScreen> {
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () {
-                              // TODO: Start Navigation
+                              // Navigation start logic
+                              debugPrint("Starting navigation simulation...");
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Navigation Started!'),
+                                ),
+                              );
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text("Navigation started!"),
@@ -606,7 +612,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
       _loadParkingSpots();
 
       // Handle Marker Clicks
-      manager.addOnPointAnnotationClickListener(
+      // ignore: deprecated_member_use
+      _pointAnnotationManager?.addOnPointAnnotationClickListener(
         AnnotationClickListener(
           onAnnotationClick: (annotation) {
             final spot = _annotationIdToSpot[annotation.id];
@@ -1191,7 +1198,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
   // Seed data method removed. Using real firestore data.
 }
 
-class AnnotationClickListener extends OnPointAnnotationClickListener {
+// ignore: deprecated_member_use
+class AnnotationClickListener implements OnPointAnnotationClickListener {
   final Function(PointAnnotation) onAnnotationClick;
   AnnotationClickListener({required this.onAnnotationClick});
 

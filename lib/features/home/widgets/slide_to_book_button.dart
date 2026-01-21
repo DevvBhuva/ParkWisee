@@ -7,11 +7,11 @@ class SlideToBookButton extends StatefulWidget {
   final String completionLabel;
 
   const SlideToBookButton({
-    Key? key,
+    super.key,
     required this.onCompleted,
     this.label = 'Book Spot',
     this.completionLabel = 'BOOKED',
-  }) : super(key: key);
+  });
 
   @override
   State<SlideToBookButton> createState() => _SlideToBookButtonState();

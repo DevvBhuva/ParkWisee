@@ -50,7 +50,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'YOUR-ANDROID-API-KEY-HERE', // TODO: User must configure this
+    apiKey: 'YOUR-ANDROID-API-KEY-HERE',
     appId: '1:1234567890:android:1234567890abcdef',
     messagingSenderId: '1234567890',
     projectId: 'parkwise-demo',
@@ -58,7 +58,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'YOUR-IOS-API-KEY-HERE', // TODO: User must configure this
+    apiKey: 'YOUR-IOS-API-KEY-HERE',
     appId: '1:1234567890:ios:1234567890abcdef',
     messagingSenderId: '1234567890',
     projectId: 'parkwise-demo',

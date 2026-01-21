@@ -20,7 +20,7 @@ class NotificationPopup extends StatelessWidget {
           Positioned.fill(
             child: GestureDetector(
               onTap: onToggle,
-              child: Container(color: Colors.black.withOpacity(0.2)),
+              child: Container(color: Colors.black.withValues(alpha: 0.05)),
             ),
           ),
 

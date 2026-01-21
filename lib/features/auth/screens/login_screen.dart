@@ -145,7 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Card(
                   color: const Color(0xFFFAFAFA),
                   elevation: 8,
-                  shadowColor: Colors.black.withOpacity(0.1),
+                  shadowColor: Colors.black.withValues(alpha: 0.1),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24),
                   ),
@@ -180,7 +180,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             alignment: Alignment.centerRight,
                             child: TextButton(
                               onPressed: () {
-                                // TODO: Forgot Password implementation
+                                // Forgot Password implementation
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Feature coming soon!'),
+                                  ),
+                                );
                               },
                               child: Text(
                                 'Forgot Password?',

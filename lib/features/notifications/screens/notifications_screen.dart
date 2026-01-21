@@ -8,7 +8,7 @@ class NotificationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final NotificationService _service = NotificationService();
+    final NotificationService service = NotificationService();
 
     return Scaffold(
       backgroundColor: Colors.black, // Dark background as per design
@@ -28,7 +28,7 @@ class NotificationsScreen extends StatelessWidget {
         ),
       ),
       body: StreamBuilder<List<NotificationModel>>(
-        stream: _service.getNotificationsStream(),
+        stream: service.getNotificationsStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(

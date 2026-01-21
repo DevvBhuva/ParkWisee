@@ -10,7 +10,7 @@ import 'package:parkwise/features/parking/models/booking_model.dart';
 class TicketScreen extends StatefulWidget {
   final Booking booking;
 
-  const TicketScreen({Key? key, required this.booking}) : super(key: key);
+  const TicketScreen({super.key, required this.booking});
 
   @override
   State<TicketScreen> createState() => _TicketScreenState();
@@ -62,7 +62,7 @@ class _TicketScreenState extends State<TicketScreen> {
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -126,7 +126,8 @@ class _TicketScreenState extends State<TicketScreen> {
                         // Vehicle Info
                         _buildDetailRow(
                           'Vehicle Name',
-                          widget.booking.vehicleId,
+                          widget.booking.vehicleModel ??
+                              widget.booking.vehicleId,
                         ),
                         _buildDetailRow(
                           'Vehicle Number',

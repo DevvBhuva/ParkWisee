@@ -19,12 +19,12 @@ class BookingScreen extends StatefulWidget {
   final int availableSlots;
 
   const BookingScreen({
-    Key? key,
+    super.key,
     required this.spot,
     required this.vehicleType,
     required this.pricePerHour,
     required this.availableSlots,
-  }) : super(key: key);
+  });
 
   @override
   State<BookingScreen> createState() => _BookingScreenState();
@@ -33,6 +33,7 @@ class BookingScreen extends StatefulWidget {
 class _BookingScreenState extends State<BookingScreen> {
   int _selectedSlotId = -1; // -1 means none selected
   DateTime _selectedDate = DateTime.now();
+  TimeOfDay _selectedTime = TimeOfDay.now(); // Added time state
 
   double _duration = 1.0; // Hours
   int _daySelectionIndex = 0; // 0: Today, 1: Tomorrow, 2: Later
@@ -152,6 +153,97 @@ class _BookingScreenState extends State<BookingScreen> {
                           ),
                           const SizedBox(height: 24),
 
+                          // Slot Time Selection
+                          Text(
+                            'Time',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          GestureDetector(
+                            onTap: () async {
+                              final time = await showTimePicker(
+                                context: context,
+                                initialTime: _selectedTime,
+                                builder: (context, child) {
+                                  return Theme(
+                                    data: Theme.of(context).copyWith(
+                                      timePickerTheme: TimePickerThemeData(
+                                        backgroundColor: Colors.white,
+                                        dialHandColor: Colors.green,
+                                        dialBackgroundColor:
+                                            Colors.grey.shade100,
+                                        hourMinuteTextColor:
+                                            Colors.green.shade800,
+                                        dayPeriodTextColor:
+                                            Colors.green.shade800,
+                                        entryModeIconColor: Colors.green,
+                                      ),
+                                      textButtonTheme: TextButtonThemeData(
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.green,
+                                        ),
+                                      ),
+                                    ),
+                                    child: child!,
+                                  );
+                                },
+                              );
+                              if (time != null) {
+                                setState(() {
+                                  _selectedTime = time;
+                                  // Update _selectedDate with new time
+                                  _selectedDate = DateTime(
+                                    _selectedDate.year,
+                                    _selectedDate.month,
+                                    _selectedDate.day,
+                                    time.hour,
+                                    time.minute,
+                                  );
+                                });
+                                setSheetState(() {});
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 20,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.access_time_rounded,
+                                    color: Colors.green,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    _selectedTime.format(context),
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    'Change',
+                                    style: GoogleFonts.outfit(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
                           // Duration Heading
                           Center(
                             child: Text(
@@ -213,14 +305,21 @@ class _BookingScreenState extends State<BookingScreen> {
                                 await Future.delayed(
                                   const Duration(seconds: 1),
                                 );
-                                if (mounted) {
+                                if (context.mounted) {
                                   // Reset slider state if needed?
                                   // For now, proceed to open popup
                                   showDialog(
                                     context: context,
                                     builder: (context) => VehicleDetailsDialog(
                                       vehicleType: widget.vehicleType,
-                                      onProceed: (model, plate) {
+                                      onProceed: (model, plate) async {
+                                        await Future.delayed(
+                                          const Duration(seconds: 1),
+                                        );
+                                        if (!context.mounted) return;
+                                        Navigator.pop(
+                                          context,
+                                        ); // Close loading dialog
                                         Navigator.pop(context); // Close Dialog
                                         Navigator.pop(context); // Close Sheet
 
@@ -299,8 +398,9 @@ class _BookingScreenState extends State<BookingScreen> {
           // BUT we want to show all slots (e.g. 10).
           // Heuristic: total = currentAvailable + bookedCount
           // If a new booking happens, available decreases, occupied increases. Total stays same.
-          final totalEffectiveSlots =
-              widget.availableSlots + occupiedSlots.length;
+          // Use availableSlots as the total count to prevent grid expansion (e.g. 10 + 1 = 11).
+          // This assumes availableSlots might be the total capacity or acceptable to show.
+          final totalEffectiveSlots = widget.availableSlots;
 
           return Column(
             children: [
@@ -451,8 +551,10 @@ class _BookingScreenState extends State<BookingScreen> {
                                   boxShadow: [
                                     BoxShadow(
                                       color: isSelected
-                                          ? Colors.green.withOpacity(0.2)
-                                          : Colors.black.withOpacity(0.05),
+                                          ? Colors.green.withValues(alpha: 0.2)
+                                          : Colors.black.withValues(
+                                              alpha: 0.05,
+                                            ),
                                       blurRadius: isSelected ? 8 : 4,
                                       offset: const Offset(0, 4),
                                     ),
@@ -505,26 +607,26 @@ class _BookingScreenState extends State<BookingScreen> {
       child: GestureDetector(
         onTap: () async {
           setState(() => _daySelectionIndex = index);
-          setSheetState(() {}); // Refresh sheet UI
+          DateTime baseDate;
+
           if (index == 2) {
             // Later -> Custom Themed Calendar
             final date = await showDatePicker(
               context: context,
-              initialDate: DateTime.now(),
+              initialDate: _selectedDate,
               firstDate: DateTime.now(),
               lastDate: DateTime.now().add(const Duration(days: 30)),
               builder: (context, child) {
                 return Theme(
                   data: Theme.of(context).copyWith(
                     colorScheme: ColorScheme.light(
-                      primary: Colors.green.shade700, // Header background color
-                      onPrimary: Colors.white, // Header text color
-                      onSurface: Colors.black, // Body text color
+                      primary: Colors.green.shade700,
+                      onPrimary: Colors.white,
+                      onSurface: Colors.black,
                     ),
                     textButtonTheme: TextButtonThemeData(
                       style: TextButton.styleFrom(
-                        foregroundColor:
-                            Colors.green.shade700, // Button text color
+                        foregroundColor: Colors.green.shade700,
                       ),
                     ),
                     dialogTheme: const DialogThemeData(
@@ -535,19 +637,28 @@ class _BookingScreenState extends State<BookingScreen> {
                 );
               },
             );
-            if (date != null) {
-              setState(() => _selectedDate = date);
-              setSheetState(() {});
-            }
+            if (date == null) return;
+            baseDate = date;
           } else if (index == 0) {
-            setState(() => _selectedDate = DateTime.now());
-            setSheetState(() {});
-          } else if (index == 1) {
-            setState(
-              () => _selectedDate = DateTime.now().add(const Duration(days: 1)),
-            );
-            setSheetState(() {});
+            baseDate = DateTime.now();
+            // If checking 'Today', maybe we want to reset time to now if the *current* selected time is in past?
+            // For simplicity, let's keep selected time if possible, or reset to now if it's earlier than now?
+            // User can just pick time. Let's just use base date year/month/day.
+          } else {
+            // Tomorrow
+            baseDate = DateTime.now().add(const Duration(days: 1));
           }
+
+          setState(() {
+            _selectedDate = DateTime(
+              baseDate.year,
+              baseDate.month,
+              baseDate.day,
+              _selectedTime.hour,
+              _selectedTime.minute,
+            );
+          });
+          setSheetState(() {});
         },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
