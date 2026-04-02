@@ -17,7 +17,6 @@ import 'package:parkwise/features/parking/models/booking_model.dart'; // Added f
 
 import 'package:parkwise/features/home/models/location_model.dart';
 import 'package:parkwise/features/home/services/location_service.dart';
-import 'package:parkwise/features/notifications/services/local_notification_service.dart'; // Added
 import 'package:parkwise/features/home/widgets/location_header_button.dart';
 import 'package:parkwise/features/home/widgets/city_selection_popup.dart';
 import 'package:parkwise/features/home/widgets/area_selection_popup.dart';
@@ -62,23 +61,8 @@ class _HomeScreenState extends State<HomeScreen> {
       // 1b. Global cleanup
       await _runGlobalCleanup();
 
-      // 2. Restore active bookings for Live Notifications (Realtime Timer)
-      final allBookingsStream = _bookingService.getBookingsStream(user.uid);
-      final allBookings = await allBookingsStream.first; // Get current snapshot
-
-      // Filter for active ones (confirmed and not end time passed)
-      final now = DateTime.now();
-      final active = allBookings
-          .where(
-            (b) =>
-                (b.status == 'confirmed' || b.status == 'booked') &&
-                b.endTime.isAfter(now),
-          )
-          .toList();
-
-      if (active.isNotEmpty) {
-        LocalNotificationService().restoreActiveBookings(active);
-      }
+      // 1b. Global cleanup
+      await _runGlobalCleanup();
     }
   }
 
