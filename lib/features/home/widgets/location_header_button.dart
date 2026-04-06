@@ -13,13 +13,15 @@ class LocationHeaderButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -31,18 +33,18 @@ class LocationHeaderButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.location_on, color: Color(0xFF4ADE80), size: 20),
+            Icon(Icons.location_on, color: colorScheme.secondary, size: 20),
             const SizedBox(width: 8),
             Text(
               locationText,
               style: GoogleFonts.outfit(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF0F172A),
+                color: colorScheme.onSurface,
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.keyboard_arrow_down, color: Colors.grey, size: 20),
+            Icon(Icons.keyboard_arrow_down, color: colorScheme.onSurfaceVariant, size: 20),
           ],
         ),
       ),

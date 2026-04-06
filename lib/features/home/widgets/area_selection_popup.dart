@@ -49,14 +49,16 @@ class _AreaSelectionPopupState extends State<AreaSelectionPopup> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.8,
       ),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
@@ -78,7 +80,7 @@ class _AreaSelectionPopupState extends State<AreaSelectionPopup> {
                   style: GoogleFonts.outfit(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF0F172A),
+                    color: colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -87,10 +89,10 @@ class _AreaSelectionPopupState extends State<AreaSelectionPopup> {
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: colorScheme.surfaceContainerHighest,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.close, size: 20),
+                  child: Icon(Icons.close, size: 20, color: colorScheme.onSurface),
                 ),
               ),
             ],
@@ -99,7 +101,7 @@ class _AreaSelectionPopupState extends State<AreaSelectionPopup> {
             'in ${widget.city.name}',
             style: GoogleFonts.outfit(
               fontSize: 14,
-              color: Colors.grey.shade500,
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 20),
@@ -107,23 +109,23 @@ class _AreaSelectionPopupState extends State<AreaSelectionPopup> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
             ),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                icon: Icon(Icons.search, color: Colors.grey.shade500),
+                icon: Icon(Icons.search_rounded, color: colorScheme.primary),
                 hintText: 'Search areas...',
-                hintStyle: GoogleFonts.outfit(color: Colors.grey.shade400),
+                hintStyle: GoogleFonts.outfit(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
               ),
               style: GoogleFonts.outfit(
-                color: Colors.black87,
+                color: colorScheme.onSurface,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -133,19 +135,20 @@ class _AreaSelectionPopupState extends State<AreaSelectionPopup> {
             child: _filteredAreas.isEmpty
                 ? Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(20.0),
+                      padding: const EdgeInsets.all(24.0),
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Icons.location_off_outlined,
-                            size: 48,
-                            color: Colors.grey.shade300,
+                            size: 64,
+                            color: colorScheme.outlineVariant,
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 16),
                           Text(
                             "No areas found",
                             style: GoogleFonts.outfit(
-                              color: Colors.grey.shade400,
+                              color: colorScheme.onSurfaceVariant,
                               fontSize: 16,
                             ),
                           ),
@@ -164,28 +167,28 @@ class _AreaSelectionPopupState extends State<AreaSelectionPopup> {
                           color: Colors.transparent,
                           child: InkWell(
                             onTap: () => widget.onAreaSelected(area),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(16),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                vertical: 12,
+                                vertical: 14,
                                 horizontal: 16,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.grey.shade200),
+                                color: colorScheme.surface,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
                               ),
                               child: Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(8),
+                                    padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: Colors.orange.shade50,
-                                      shape: BoxShape.circle,
+                                      color: colorScheme.primaryContainer,
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Icon(
-                                      Icons.place_outlined,
-                                      color: Colors.orange.shade700,
+                                      Icons.place_rounded,
+                                      color: colorScheme.primary,
                                       size: 20,
                                     ),
                                   ),
@@ -195,14 +198,14 @@ class _AreaSelectionPopupState extends State<AreaSelectionPopup> {
                                     style: GoogleFonts.outfit(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF0F172A),
+                                      color: colorScheme.onSurface,
                                     ),
                                   ),
                                   const Spacer(),
                                   Icon(
                                     Icons.arrow_forward_ios_rounded,
                                     size: 14,
-                                    color: Colors.grey.shade300,
+                                    color: colorScheme.outline,
                                   ),
                                 ],
                               ),

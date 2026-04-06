@@ -101,39 +101,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : Colors.black;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: colorScheme.surface,
       resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.only(
-            left: 24.0,
-            right: 24.0,
-            top: 24.0,
-            bottom: 120.0, // Increased bottom padding to clear the floating nav
-          ),
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
           children: [
             const SizedBox(height: 20),
             // Profile Header (Expandable)
-            Container(
-              decoration: BoxDecoration(
-                color: isDark ? Colors.grey.shade900 : Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
+            Card(
+              clipBehavior: Clip.antiAlias,
               child: Theme(
-                data: Theme.of(
-                  context,
-                ).copyWith(dividerColor: Colors.transparent),
+                data: theme.copyWith(dividerColor: Colors.transparent),
                 child: ExpansionTile(
                   tilePadding: const EdgeInsets.all(16),
                   childrenPadding: const EdgeInsets.symmetric(
@@ -145,13 +128,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     height: 60,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: isDark
-                          ? Colors.grey.shade800
-                          : Colors.grey.shade100,
+                      color: colorScheme.surfaceContainerHighest,
                       border: Border.all(
-                        color: isDark
-                            ? Colors.grey.shade700
-                            : Colors.grey.shade200,
+                        color: colorScheme.outline.withValues(alpha: 0.2),
                         width: 2,
                       ),
                     ),
@@ -163,7 +142,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         errorBuilder: (context, error, stackTrace) => Icon(
                           Icons.person,
                           size: 30,
-                          color: Colors.grey.shade400,
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -173,14 +152,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: GoogleFonts.outfit(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: textColor,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                   subtitle: Text(
                     'Tap to edit details',
                     style: GoogleFonts.outfit(
                       fontSize: 14,
-                      color: Colors.grey.shade500,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                   children: [
@@ -188,52 +167,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _nameController,
-                      style: GoogleFonts.outfit(color: textColor),
+                      style: GoogleFonts.outfit(color: colorScheme.onSurface),
                       decoration: InputDecoration(
                         labelText: 'Full Name',
-                        labelStyle: GoogleFonts.outfit(
-                          color: Colors.grey.shade600,
-                        ),
                         prefixIcon: Icon(
                           Icons.person_outline,
-                          color: Colors.grey.shade400,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.blue),
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _phoneController,
-                      style: GoogleFonts.outfit(color: textColor),
+                      style: GoogleFonts.outfit(color: colorScheme.onSurface),
                       decoration: InputDecoration(
                         labelText: 'Mobile Number',
-                        labelStyle: GoogleFonts.outfit(
-                          color: Colors.grey.shade600,
-                        ),
                         prefixIcon: Icon(
                           Icons.phone_outlined,
-                          color: Colors.grey.shade400,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.blue),
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                       keyboardType: TextInputType.phone,
@@ -243,15 +194,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _isSaving ? null : _updateProfile,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
                         child: _isSaving
                             ? const SizedBox(
                                 height: 20,
@@ -371,19 +313,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF5A5F),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: colorScheme.errorContainer,
+                  foregroundColor: colorScheme.onErrorContainer,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                  shadowColor: Colors.transparent,
                 ),
                 child: Text(
                   'LOGOUT',
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
                     letterSpacing: 1.0,
                   ),
                 ),
@@ -402,40 +341,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String title,
     required VoidCallback onTap,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: ListTile(
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        tileColor: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: isDark ? Colors.grey.shade800 : Colors.white,
-            shape: BoxShape.circle,
+      child: Card(
+        child: ListTile(
+          onTap: onTap,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          leading: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              shape: BoxShape.circle,
+              border: Border.all(color: colorScheme.outline),
+            ),
+            child: Image.asset(
+              assetPath,
+              width: 24,
+              height: 24,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => Icon(
+                Icons.extension,
+                size: 24,
+                color: colorScheme.primary,
+              ),
+            ),
           ),
-          child: Image.asset(
-            assetPath,
-            width: 24,
-            height: 24,
-            fit: BoxFit.contain,
+          title: Text(
+            title,
+            style: GoogleFonts.outfit(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: colorScheme.onSurface,
+            ),
           ),
-        ),
-        title: Text(
-          title,
-          style: GoogleFonts.outfit(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: isDark ? Colors.white : Colors.black,
+          trailing: Icon(
+            Icons.arrow_forward_ios,
+            size: 16,
+            color: colorScheme.onSurfaceVariant,
           ),
-        ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: Colors.grey.shade400,
         ),
       ),
     );

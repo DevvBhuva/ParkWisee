@@ -16,11 +16,13 @@ class CitySelectionPopup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
@@ -41,7 +43,7 @@ class CitySelectionPopup extends StatelessWidget {
                 style: GoogleFonts.outfit(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF0F172A),
+                  color: colorScheme.onSurface,
                 ),
               ),
               IconButton(
@@ -49,16 +51,16 @@ class CitySelectionPopup extends StatelessWidget {
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: colorScheme.surfaceContainerHighest,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.close, size: 20),
+                  child: Icon(Icons.close, size: 20, color: colorScheme.onSurface),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          const Divider(),
+          Divider(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
           const SizedBox(height: 8),
           Flexible(
             child: ListView.builder(
@@ -72,29 +74,29 @@ class CitySelectionPopup extends StatelessWidget {
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: () => onCitySelected(city),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          vertical: 12,
+                          vertical: 14,
                           horizontal: 16,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade200),
+                          color: colorScheme.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
                         ),
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: Colors.green.shade50,
-                                shape: BoxShape.circle,
+                                color: colorScheme.secondaryContainer,
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
-                                Icons.location_city,
-                                color: Colors.green.shade700,
-                                size: 20,
+                                Icons.location_city_rounded,
+                                color: colorScheme.secondary,
+                                size: 22,
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -103,14 +105,14 @@ class CitySelectionPopup extends StatelessWidget {
                               style: GoogleFonts.outfit(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: const Color(0xFF0F172A),
+                                color: colorScheme.onSurface,
                               ),
                             ),
                             const Spacer(),
                             Icon(
                               Icons.arrow_forward_ios_rounded,
-                              size: 16,
-                              color: Colors.grey.shade400,
+                              size: 14,
+                              color: colorScheme.outline,
                             ),
                           ],
                         ),

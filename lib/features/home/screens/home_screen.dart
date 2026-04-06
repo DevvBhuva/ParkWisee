@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:async'; // Added for Timer
 import 'package:google_fonts/google_fonts.dart';
 import 'package:parkwise/features/home/widgets/parking_details_popup.dart';
 
@@ -11,8 +10,8 @@ import 'package:parkwise/features/notifications/services/notification_service.da
 import 'package:parkwise/features/notifications/models/notification_model.dart';
 import 'package:parkwise/features/notifications/widgets/notification_popup.dart';
 import 'package:parkwise/features/navigation/screens/navigation_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parkwise/features/parking/services/booking_firestore_service.dart';
+
 import 'package:parkwise/features/parking/models/booking_model.dart'; // Added for Booking type
 
 import 'package:parkwise/features/home/models/location_model.dart';
@@ -34,9 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final ParkingFirestoreService _parkingService = ParkingFirestoreService();
   final BookingFirestoreService _bookingService = BookingFirestoreService();
 
-  Timer? _cleanupTimer; // Added
-
   // Location State
+
   final LocationService _locationService = LocationService();
   City? _selectedCity;
   Area? _selectedArea;
@@ -44,48 +42,16 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _cleanupBookings();
-
-    // Run global cleanup periodically (every 60 seconds) to make it "dynamic"
-    _cleanupTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
-      _runGlobalCleanup();
-    });
   }
 
-  Future<void> _cleanupBookings() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      // 1. Cleanup user's expired bookings
-      await _bookingService.checkAndReleaseExpiredBookings(user.uid);
 
-      // 1b. Global cleanup
-      await _runGlobalCleanup();
 
-      // 1b. Global cleanup
-      await _runGlobalCleanup();
-    }
-  }
-
-  Future<void> _runGlobalCleanup() async {
-    // Global cleanup for all parking spots (Client-side sync)
-    // accessible to this user.
-    try {
-      final parkingsStream = _parkingService.getParkingSpots();
-      final parkings = await parkingsStream.first;
-      for (var spot in parkings) {
-        await _bookingService.checkAndReleaseExpiredBookingsForParking(spot.id);
-      }
-      debugPrint("Global cleanup executed.");
-    } catch (e) {
-      debugPrint("Global cleanup failed: $e");
-    }
-  }
 
   @override
   void dispose() {
-    _cleanupTimer?.cancel(); // Cancel the timer
     super.dispose();
   }
+
 
   // Vehicle Categories
   final List<Map<String, dynamic>> _vehicleCategories = [
@@ -98,8 +64,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.grey.shade50, // Light grey background
+      backgroundColor: colorScheme.surface,
       body: Stack(
         children: [
           // Main Content
@@ -126,8 +93,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHomeContent() {
+    final colorScheme = Theme.of(context).colorScheme;
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(left: 24, right: 24, top: 60, bottom: 100),
+      padding: const EdgeInsets.fromLTRB(24, 60, 24, 100),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -156,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
             style: GoogleFonts.outfit(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF0F172A), // Dark text color
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 16),
@@ -190,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF0F172A),
+                  color: colorScheme.onSurface,
                 ),
               ),
               GestureDetector(
@@ -200,9 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: const Color(
-                      0xFF4ADE80,
-                    ), // Light Green - reference color
+                    color: colorScheme.secondary,
                   ),
                 ),
               ),
@@ -218,71 +184,35 @@ class _HomeScreenState extends State<HomeScreen> {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
-                // Return generic error, or empty list
                 return const SizedBox.shrink();
               }
 
-              // NEW: Listen to active bookings stream for dynamic availability
               return StreamBuilder<List<Booking>>(
                 stream: _bookingService.getAllActiveBookings(),
                 builder: (context, bookingSnapshot) {
-                  // We continue even if bookings are loading (assume 0 active) or error
-                  // Real-time updates will work when data arrives.
                   final activeBookings = bookingSnapshot.data ?? [];
-
-                  // Calculate Dynamic Availability
-                  // We create a NEW list of ParkingSpots with updated 'vehicles' map
                   final allParkings = _mergeAvailability(
                     snapshot.data ?? [],
                     activeBookings,
                   );
 
-                  // Filter Parkings
                   List<ParkingSpot> filteredParkings = allParkings;
                   String? selectedVehicleTypeKey;
 
                   if (_selectedVehicleIndex != -1) {
                     final category = _vehicleCategories[_selectedVehicleIndex];
-                    selectedVehicleTypeKey = (category['name'] as String)
-                        .toLowerCase();
-
-                    debugPrint(
-                      "DEBUG: Filtering for Vehicle: $selectedVehicleTypeKey",
-                    );
-
+                    selectedVehicleTypeKey = (category['name'] as String).toLowerCase();
                     filteredParkings = allParkings.where((spot) {
                       final vData = spot.vehicles[selectedVehicleTypeKey];
-
-                      if (vData == null) {
-                        debugPrint(
-                          "DEBUG: Hiding ${spot.name} - Vehicle '$selectedVehicleTypeKey' not supported.",
-                        );
-                        return false;
-                      }
-                      // Check DYNAMICALLY CALCULATED slots
-                      if (vData.slots <= 0) {
-                        debugPrint(
-                          "DEBUG: Hiding ${spot.name} - No slots available (Total - Booked <= 0)",
-                        );
-                        return false;
-                      }
-
-                      return true;
+                      return vData != null && vData.slots > 0;
                     }).toList();
                   }
 
-                  // Filter by Area Keyword if an area is selected
                   if (_selectedArea != null) {
                     final areaKeyword = _normalizeText(_selectedArea!.name);
-                    debugPrint(
-                      "DEBUG: Selected Area: ${_selectedArea!.name} -> Keyword: '$areaKeyword'",
-                    );
-
                     if (areaKeyword.isNotEmpty) {
                       filteredParkings = filteredParkings.where((spot) {
-                        final parkingText = _normalizeText(
-                          '${spot.name} ${spot.address}',
-                        );
+                        final parkingText = _normalizeText('${spot.name} ${spot.address}');
                         return parkingText.contains(areaKeyword);
                       }).toList();
                     }
@@ -296,7 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Center(
                         child: Text(
                           "No parking spots found for ${_vehicleCategories[_selectedVehicleIndex]['name']}",
-                          style: GoogleFonts.outfit(color: Colors.grey),
+                          style: GoogleFonts.outfit(color: colorScheme.onSurfaceVariant),
                         ),
                       ),
                     );
@@ -307,8 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     shrinkWrap: true,
                     padding: EdgeInsets.zero,
                     itemCount: displayParkings.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 20),
+                    separatorBuilder: (context, index) => const SizedBox(height: 20),
                     itemBuilder: (context, index) {
                       return _buildParkingCard(
                         displayParkings[index],
@@ -326,10 +255,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showAllSpots() {
+    final colorScheme = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -346,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: colorScheme.outlineVariant,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -357,6 +287,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -370,12 +301,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     }
                     var parkings = snapshot.data!;
 
-                    // Apply SAME filters as Home Screen
                     if (_selectedVehicleIndex != -1) {
-                      final category =
-                          _vehicleCategories[_selectedVehicleIndex];
-                      final selectedVehicleTypeKey =
-                          (category['name'] as String).toLowerCase();
+                      final category = _vehicleCategories[_selectedVehicleIndex];
+                      final selectedVehicleTypeKey = (category['name'] as String).toLowerCase();
                       parkings = parkings.where((spot) {
                         final vData = spot.vehicles[selectedVehicleTypeKey];
                         return vData != null && vData.slots > 0;
@@ -386,24 +314,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       final areaKeyword = _normalizeText(_selectedArea!.name);
                       if (areaKeyword.isNotEmpty) {
                         parkings = parkings.where((spot) {
-                          final parkingText = _normalizeText(
-                            '${spot.name} ${spot.address}',
-                          );
+                          final parkingText = _normalizeText('${spot.name} ${spot.address}');
                           return parkingText.contains(areaKeyword);
                         }).toList();
                       }
                     }
 
-                    // Filter out the first 3 that are shown on home screen based on the filtered list
-                    final otherParkings = parkings.length > 3
-                        ? parkings.skip(3).toList()
-                        : <ParkingSpot>[];
+                    final otherParkings = parkings.length > 3 ? parkings.skip(3).toList() : <ParkingSpot>[];
 
                     if (otherParkings.isEmpty) {
                       return Center(
                         child: Text(
                           "No more spots available nearby",
-                          style: GoogleFonts.outfit(color: Colors.grey),
+                          style: GoogleFonts.outfit(color: colorScheme.onSurfaceVariant),
                         ),
                       );
                     }
@@ -412,10 +335,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       controller: scrollController,
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       itemCount: otherParkings.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 20),
-                      itemBuilder: (context, index) =>
-                          _buildParkingCard(otherParkings[index]),
+                      separatorBuilder: (context, index) => const SizedBox(height: 20),
+                      itemBuilder: (context, index) => _buildParkingCard(otherParkings[index]),
                     );
                   },
                 ),
@@ -430,6 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final NotificationService _notificationService = NotificationService();
 
   Widget _buildHeaderButton(IconData icon) {
+    final colorScheme = Theme.of(context).colorScheme;
     return StreamBuilder<List<NotificationModel>>(
       stream: _notificationService.getNotificationsStream(),
       builder: (context, snapshot) {
@@ -455,17 +377,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: colorScheme.surfaceContainer,
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  border: Border.all(color: colorScheme.outline),
+                  boxShadow: Theme.of(context).brightness == Brightness.light 
+                    ? [
+                        BoxShadow(
+                          color: colorScheme.shadow,
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : null,
                 ),
-                child: Icon(icon, color: Colors.black87),
+                child: Icon(icon, color: colorScheme.onSurface),
               ),
               if (unreadCount > 0)
                 Positioned(
@@ -474,12 +399,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Container(
                     width: 10,
                     height: 10,
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
+                    decoration: BoxDecoration(
+                      color: colorScheme.error,
                       shape: BoxShape.circle,
-                      border: Border.fromBorderSide(
-                        BorderSide(color: Colors.white, width: 2),
-                      ),
+                      border: Border.all(color: colorScheme.surface, width: 2),
                     ),
                   ),
                 ),
@@ -491,12 +414,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildVehicleCard(int index, String name, String imagePath) {
+    final colorScheme = Theme.of(context).colorScheme;
     bool isSelected = _selectedVehicleIndex == index;
     return GestureDetector(
       onTap: () {
         setState(() {
           if (_selectedVehicleIndex == index) {
-            _selectedVehicleIndex = -1; // Deselect if tapped again
+            _selectedVehicleIndex = -1;
           } else {
             _selectedVehicleIndex = index;
           }
@@ -509,15 +433,14 @@ class _HomeScreenState extends State<HomeScreen> {
             height: 75,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              // User: "highlighting part in bottom nav should match the colour with see all" (Light Green)
-              // User: "user should select the choose vehicle and the highlighiting part in the same colour as see all"
-              color: isSelected ? const Color(0xFF4ADE80) : Colors.white,
+              color: isSelected ? colorScheme.secondary : colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(16),
-              boxShadow: isSelected
-                  ? []
+              border: Border.all(color: isSelected ? colorScheme.secondary : colorScheme.outline),
+              boxShadow: (isSelected || Theme.of(context).brightness == Brightness.dark)
+                  ? null
                   : [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
+                        color: colorScheme.shadow,
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -526,8 +449,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Image.asset(
               imagePath,
               fit: BoxFit.contain,
-              // Ideally change icon color if background is green (to white/black?), but images are assets.
-              // Assuming they look okay on green.
+              color: isSelected ? Colors.white : null,
             ),
           ),
           const SizedBox(height: 8),
@@ -536,7 +458,7 @@ class _HomeScreenState extends State<HomeScreen> {
             style: GoogleFonts.outfit(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: colorScheme.onSurface,
             ),
           ),
         ],
@@ -545,6 +467,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildParkingCard(ParkingSpot parking, [String? selectedVehicleType]) {
+    final colorScheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: () {
         showModalBottomSheet(
@@ -557,18 +480,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
+      child: Card(
+        clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -578,7 +491,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 top: Radius.circular(24),
               ),
               child: Image.asset(
-                'assets/images/parking_aerial.jpg', // Or parking.imageUrl if valid
+                'assets/images/parking_aerial.jpg',
                 height: 150,
                 width: double.infinity,
                 fit: BoxFit.cover,
@@ -590,7 +503,6 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -601,7 +513,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: GoogleFonts.outfit(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF0F172A),
+                            color: colorScheme.onSurface,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -610,18 +522,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 4),
 
-                  // Address
                   Text(
                     parking.address,
                     style: GoogleFonts.outfit(
                       fontSize: 14,
-                      color: Colors.grey.shade400,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 12),
 
-                  // Rating and Open Status
                   Row(
                     children: [
                       const Icon(Icons.star, color: Colors.amber, size: 18),
@@ -631,39 +541,37 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: GoogleFonts.outfit(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF0F172A),
+                          color: colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(width: 16),
                       Icon(
                         Icons.access_time,
-                        color: Colors.grey.shade400,
+                        color: colorScheme.onSurfaceVariant,
                         size: 18,
                       ),
                       const SizedBox(width: 4),
-                      // Display Time from DB
                       Text(
                         '${parking.openTime} - ${parking.closeTime}',
                         style: GoogleFonts.outfit(
                           fontSize: 14,
-                          color: Colors.grey.shade400,
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                       const Spacer(),
                       if (parking.isOpen)
                         Text(
-                          'OPEN', // "if parking is open then write OPEN in green same as see all"
+                          'OPEN',
                           style: GoogleFonts.outfit(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF4ADE80), // Light Green
+                            color: colorScheme.secondary,
                           ),
                         ),
                     ],
                   ),
                   const SizedBox(height: 12),
 
-                  // Facilities Row
                   if (parking.facilities.isNotEmpty) ...[
                     SizedBox(
                       height: 24,
@@ -680,14 +588,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
+                                color: colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 facility,
                                 style: GoogleFonts.outfit(
                                   fontSize: 10,
-                                  color: Colors.grey.shade700,
+                                  color: colorScheme.onSurface,
                                 ),
                               ),
                             ),
@@ -698,7 +606,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 12),
                   ],
 
-                  // Vehicles Row (Icons)
                   if (parking.vehicles.isNotEmpty) ...[
                     Row(
                       children: parking.vehicles.entries
@@ -706,31 +613,21 @@ class _HomeScreenState extends State<HomeScreen> {
                           .map((e) {
                             IconData icon;
                             switch (e.key.toLowerCase()) {
-                              case 'bike':
-                                icon = Icons.two_wheeler;
-                                break;
-                              case 'ev':
-                                icon = Icons.electric_car;
-                                break;
-                              case 'suv':
-                                icon = Icons.directions_car;
-                                break;
-                              case 'hatchback':
-                                icon = Icons.directions_car_filled;
-                                break;
-                              default:
-                                icon = Icons.local_taxi;
+                              case 'bike': icon = Icons.two_wheeler; break;
+                              case 'ev': icon = Icons.electric_car; break;
+                              case 'suv': icon = Icons.directions_car; break;
+                              case 'hatchback': icon = Icons.directions_car_filled; break;
+                              default: icon = Icons.local_taxi;
                             }
                             return Padding(
                               padding: const EdgeInsets.only(right: 8),
                               child: Icon(
                                 icon,
                                 size: 16,
-                                color: Colors.grey.shade600,
+                                color: colorScheme.onSurfaceVariant,
                               ),
                             );
-                          })
-                          .toList(),
+                          }).toList(),
                     ),
                   ],
                 ],
@@ -743,23 +640,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildFloatingBottomNav() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(8), // Reduced padding for pill shape
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white, // "bottom nav colour should be white along"
+        color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(40),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(
-              alpha: 0.05,
-            ), // Adjusted shadow for white bg
-            blurRadius: 20,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        border: Border.all(color: colorScheme.outline),
+        boxShadow: Theme.of(context).brightness == Brightness.light 
+          ? [
+              BoxShadow(
+                color: colorScheme.shadow,
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ]
+          : null,
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround, // Even spacing
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildNavItem(0, Icons.home_rounded, 'Home'),
           _buildNavItem(1, Icons.calendar_today_rounded, 'Booking'),
@@ -771,6 +670,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildNavItem(int index, IconData icon, String label) {
+    final colorScheme = Theme.of(context).colorScheme;
     final bool isSelected = _selectedIndex == index;
 
     return GestureDetector(
@@ -783,9 +683,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ? const EdgeInsets.symmetric(horizontal: 16, vertical: 12)
             : const EdgeInsets.all(12),
         decoration: isSelected
-            ? const BoxDecoration(
-                // "highlighting part in bottom nav should match the colour with see all" (Light Green)
-                color: Color(0xFF4ADE80),
+            ? BoxDecoration(
+                color: colorScheme.secondary,
                 shape: BoxShape.circle,
               )
             : null,
@@ -795,29 +694,25 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Icon(
               icon,
-              // Icon color dark on white bg or green bg
-              color: isSelected ? Colors.black : Colors.grey.shade400,
+              color: isSelected ? Colors.white : colorScheme.onSurfaceVariant,
               size: 24,
             ),
-            // Show text ONLY if selected (implied by "in highlighted paRT icon n text both will come")
-            // and unselected usually just icons in this style.
             if (isSelected) ...[
               const SizedBox(height: 2),
               Text(
                 label,
                 style: GoogleFonts.outfit(
-                  fontSize: 10, // Small text inside circle
+                  fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: Colors.white,
                 ),
               ),
               const SizedBox(height: 2),
-              // Small dot indicator as seen in image
               Container(
                 width: 4,
                 height: 4,
                 decoration: const BoxDecoration(
-                  color: Colors.black,
+                  color: Colors.white,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -834,46 +729,53 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showOverlay(Widget child) {
     _overlayEntry?.remove();
     _overlayEntry = OverlayEntry(
-      builder: (context) => Stack(
-        children: [
-          // Transparent dismissible background
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: _closeOverlay,
-              behavior: HitTestBehavior.translucent,
-              // Dimmed background
-              child: Container(color: Colors.black54),
-            ),
-          ),
-          // Positioned Popup
-          CompositedTransformFollower(
-            link: _layerLink,
-            offset: const Offset(0, 50), // Position below the button
-            showWhenUnlinked: false,
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                constraints: const BoxConstraints(
-                  maxWidth: 300,
-                  maxHeight: 400,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: child,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+        return Stack(
+          children: [
+            // Transparent dismissible background
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: _closeOverlay,
+                behavior: HitTestBehavior.translucent,
+                // Dimmed background
+                child: Container(color: Colors.black.withOpacity(0.5)),
               ),
             ),
-          ),
-        ],
-      ),
+            // Positioned Popup
+            CompositedTransformFollower(
+              link: _layerLink,
+              offset: const Offset(0, 50), // Position below the button
+              showWhenUnlinked: false,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  constraints: const BoxConstraints(
+                    maxWidth: 300,
+                    maxHeight: 400,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: colorScheme.outline),
+                    boxShadow: theme.brightness == Brightness.light
+                        ? [
+                            BoxShadow(
+                              color: colorScheme.shadow.withOpacity(0.1),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: child,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
 
     Overlay.of(context).insert(_overlayEntry!);
@@ -981,49 +883,41 @@ class _HomeScreenState extends State<HomeScreen> {
     return words.join(' ');
   }
 
-  // Merge static parking data (Total Slots) with active bookings to determine availability
   List<ParkingSpot> _mergeAvailability(
     List<ParkingSpot> parkings,
     List<Booking> bookings,
   ) {
-    if (bookings.isEmpty) return parkings;
+    if (parkings.isEmpty) return parkings;
 
     final now = DateTime.now();
 
-    return parkings.map((spot) {
-      // 1. Find bookings for this spot
-      final spotBookings = bookings
-          .where(
-            (b) =>
-                b.parkingSpotId == spot.id &&
-                (b.status == 'booked' || b.status == 'confirmed') &&
-                b.endTime.isAfter(now),
-          )
-          .toList();
+    // 1. Group bookings by parkingSpotId for O(1) lookup
+    final Map<String, List<Booking>> spotBookingsMap = {};
+    for (var b in bookings) {
+      if ((b.status == 'booked' || b.status == 'confirmed') &&
+          b.endTime.isAfter(now)) {
+        spotBookingsMap.putIfAbsent(b.parkingSpotId, () => []).add(b);
+      }
+    }
 
-      // 2. Clone vehicles map to modify slots
+    // 2. Efficiently merge availability
+    return parkings.map((spot) {
+      final spotBookings = spotBookingsMap[spot.id] ?? [];
+      if (spotBookings.isEmpty) return spot;
+
       final newVehicles = Map<String, VehicleData>.from(spot.vehicles);
 
       for (var key in newVehicles.keys) {
-        final total =
-            newVehicles[key]!.slots; // Assumes DB 'slots' is Total Capacity
-        final price = newVehicles[key]!.price;
-
-        // Count usage
+        final total = newVehicles[key]!.slots;
         final usage = spotBookings.where((b) => b.vehicleId == key).length;
-
-        // Calculate Available
         final available = total - usage;
 
-        // Update map
-        newVehicles[key] = VehicleData(price: price, slots: available);
-
-        debugPrint(
-          "DEBUG: ${spot.name} [$key] -> Total: $total, Used: $usage, Avail: $available",
+        newVehicles[key] = VehicleData(
+          price: newVehicles[key]!.price,
+          slots: available,
         );
       }
 
-      // Return new ParkingSpot instance (manually copying fields since no copyWith)
       return ParkingSpot(
         id: spot.id,
         name: spot.name,
@@ -1034,8 +928,7 @@ class _HomeScreenState extends State<HomeScreen> {
         longitude: spot.longitude,
         imageUrl: spot.imageUrl,
         totalSpots: spot.totalSpots,
-        availableSpots: spot
-            .availableSpots, // Kept as original, but 'vehicles' map has logic
+        availableSpots: spot.availableSpots,
         facilities: spot.facilities,
         vehicles: newVehicles,
         isOpen: spot.isOpen,
@@ -1045,4 +938,5 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }).toList();
   }
+
 }

@@ -54,21 +54,30 @@ class _BookingsScreenState extends State<BookingsScreen> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+    final colorScheme = Theme.of(context).colorScheme;
+
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('Please login to view bookings')),
+      return Scaffold(
+        backgroundColor: colorScheme.surface,
+        body: Center(
+          child: Text(
+            'Please login to view bookings',
+            style: GoogleFonts.outfit(color: colorScheme.onSurface),
+          ),
+        ),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
+        scrolledUnderElevation: 0,
         title: Text(
           'My Bookings',
           style: GoogleFonts.outfit(
-            color: Colors.black,
+            color: colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -77,32 +86,22 @@ class _BookingsScreenState extends State<BookingsScreen> {
       body: StreamBuilder<List<Booking>>(
         stream: _bookingService.getBookingsStream(user.uid),
         builder: (context, snapshot) {
-          // If waiting and no local bookings, show loader.
-          // If we have local bookings, we can show them while loading remote.
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              _localBookings.isEmpty) {
+          if (snapshot.connectionState == ConnectionState.waiting && _localBookings.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // Gather remote bookings if available, ignoring errors to prioritize availability
-          final firestoreBookings = snapshot.hasData
-              ? snapshot.data!
-              : <Booking>[];
+          final firestoreBookings = snapshot.hasData ? snapshot.data! : <Booking>[];
 
           if (snapshot.hasError) {
             debugPrint('Error fetching remote bookings: ${snapshot.error}');
           }
 
-          // Merge and Deduplicate
           final allBookingsMap = {
-            for (var b in _localBookings) b.id: b, // Local first
-            for (var b in firestoreBookings)
-              b.id: b, // Remote overrides (if exists)
+            for (var b in _localBookings) b.id: b,
+            for (var b in firestoreBookings) b.id: b,
           };
 
           final bookings = allBookingsMap.values.toList();
-
-          // Sort by start time descending (newest first)
           bookings.sort((a, b) => b.startTime.compareTo(a.startTime));
 
           return _buildBookingList(bookings);
@@ -112,16 +111,17 @@ class _BookingsScreenState extends State<BookingsScreen> {
   }
 
   Widget _buildBookingList(List<Booking> bookings) {
+    final colorScheme = Theme.of(context).colorScheme;
     if (bookings.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.history, size: 64, color: Colors.grey.shade300),
+            Icon(Icons.history, size: 64, color: colorScheme.outlineVariant),
             const SizedBox(height: 16),
             Text(
               'No bookings found',
-              style: GoogleFonts.outfit(color: Colors.grey),
+              style: GoogleFonts.outfit(color: colorScheme.onSurfaceVariant),
             ),
           ],
         ),
@@ -135,100 +135,82 @@ class _BookingsScreenState extends State<BookingsScreen> {
         final booking = bookings[index];
         final isExpired = booking.endTime.isBefore(DateTime.now());
 
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => TicketScreen(booking: booking),
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          color: isExpired ? colorScheme.surfaceContainer.withValues(alpha: 0.5) : colorScheme.surfaceContainer,
+          child: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TicketScreen(booking: booking),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(24),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: isExpired ? colorScheme.surfaceContainerHighest : colorScheme.secondaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.local_parking,
+                      color: isExpired ? colorScheme.onSurfaceVariant : colorScheme.secondary,
+                      size: 30,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          booking.spotName,
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: isExpired ? colorScheme.onSurfaceVariant : colorScheme.onSurface,
+                          ),
+                        ),
+                        Text(
+                          DateFormat('MMM d, h:mm a').format(booking.startTime),
+                          style: GoogleFonts.outfit(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Duration: ${booking.endTime.difference(booking.startTime).inHours} hours',
+                          style: GoogleFonts.outfit(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '\u20B9${booking.totalPrice.toStringAsFixed(0)} • ${booking.vehicleNumber}',
+                          style: GoogleFonts.outfit(
+                            color: isExpired ? colorScheme.onSurfaceVariant : colorScheme.onSurface,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right,
+                    color: colorScheme.outline,
+                  ),
+                ],
               ),
-            );
-          },
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isExpired ? Colors.grey.shade100 : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: isExpired
-                  ? Border.all(color: Colors.grey.shade300)
-                  : null,
-              boxShadow: isExpired
-                  ? []
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: isExpired
-                        ? Colors.grey.shade200
-                        : Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.local_parking,
-                    color: isExpired ? Colors.grey : Colors.green,
-                    size: 30,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        booking.spotName,
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: isExpired
-                              ? Colors.grey.shade600
-                              : Colors.black,
-                        ),
-                      ),
-                      Text(
-                        DateFormat('MMM d, h:mm a').format(booking.startTime),
-                        style: GoogleFonts.outfit(
-                          color: Colors.grey.shade600,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Duration: ${booking.endTime.difference(booking.startTime).inHours} hours',
-                        style: GoogleFonts.outfit(
-                          color: Colors.grey.shade600,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '\u20B9${booking.totalPrice.toStringAsFixed(0)} • ${booking.vehicleNumber}',
-                        style: GoogleFonts.outfit(
-                          color: isExpired ? Colors.grey : Colors.black87,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  color: isExpired
-                      ? Colors.grey.shade300
-                      : Colors.grey.shade400,
-                ),
-              ],
             ),
           ),
         );

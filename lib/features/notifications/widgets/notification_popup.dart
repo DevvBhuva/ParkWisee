@@ -14,22 +14,24 @@ class NotificationPopup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(24),
-      alignment: Alignment.topCenter, // Appear near top
+      alignment: Alignment.topCenter,
       child: Container(
         padding: const EdgeInsets.all(24),
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.6,
+          maxHeight: MediaQuery.of(context).size.height * 0.65,
         ),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(28),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 20,
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 30,
               offset: const Offset(0, 10),
             ),
           ],
@@ -45,35 +47,45 @@ class NotificationPopup extends StatelessWidget {
                 Text(
                   'Notifications',
                   style: GoogleFonts.outfit(
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
-                  child: const Icon(Icons.close, color: Colors.black54),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.close_rounded, size: 20, color: colorScheme.onSurfaceVariant),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
             // List
             if (notifications.isEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 32),
+                padding: const EdgeInsets.symmetric(vertical: 48),
                 child: Center(
                   child: Column(
                     children: [
                       Icon(
-                        Icons.notifications_none,
-                        size: 48,
-                        color: Colors.grey.shade300,
+                        Icons.notifications_none_rounded,
+                        size: 64,
+                        color: colorScheme.outlineVariant,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       Text(
                         'No notifications',
-                        style: GoogleFonts.outfit(color: Colors.grey),
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -83,35 +95,41 @@ class NotificationPopup extends StatelessWidget {
               Flexible(
                 child: ListView.separated(
                   shrinkWrap: true,
+                  physics: const BouncingScrollPhysics(),
                   itemCount: notifications.length,
                   separatorBuilder: (context, index) =>
-                      Divider(height: 24, color: Colors.grey.shade100),
+                      Divider(height: 32, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
                   itemBuilder: (context, index) {
                     final item = notifications[index];
-                    return _buildNotificationItem(item);
+                    return _buildNotificationItem(context, item);
                   },
                 ),
               ),
 
             // Footer Button
             if (notifications.isNotEmpty) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
                   onMarkAllRead();
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: Text(
                   'Mark all as read',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -121,44 +139,45 @@ class NotificationPopup extends StatelessWidget {
     );
   }
 
-  Widget _buildNotificationItem(NotificationModel item) {
+  Widget _buildNotificationItem(BuildContext context, NotificationModel item) {
+    final colorScheme = Theme.of(context).colorScheme;
     IconData icon;
-    Color color;
+    Color iconColor;
 
     switch (item.type) {
       case NotificationType.confirmation:
-        icon = Icons.check_circle;
-        color = const Color(0xFF4ADE80);
+        icon = Icons.check_circle_rounded;
+        iconColor = colorScheme.primary;
         break;
       case NotificationType.reminder:
-        icon = Icons.alarm;
-        color = const Color(0xFFF472B6);
+        icon = Icons.alarm_rounded;
+        iconColor = colorScheme.secondary;
         break;
       case NotificationType.critical:
-        icon = Icons.hourglass_bottom;
-        color = const Color(0xFF60A5FA);
+        icon = Icons.warning_amber_rounded;
+        iconColor = colorScheme.tertiary;
         break;
       case NotificationType.expired:
-        icon = Icons.remove_circle;
-        color = const Color(0xFFF87171);
+        icon = Icons.remove_circle_rounded;
+        iconColor = colorScheme.error;
         break;
       default:
-        icon = Icons.info;
-        color = Colors.grey;
+        icon = Icons.info_outline_rounded;
+        iconColor = colorScheme.onSurfaceVariant;
     }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
+            color: iconColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: color, size: 16),
+          child: Icon(icon, color: iconColor, size: 22),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,8 +190,8 @@ class NotificationPopup extends StatelessWidget {
                       item.title,
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.black87,
+                        fontSize: 16,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -180,17 +199,22 @@ class NotificationPopup extends StatelessWidget {
                     Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
+                      margin: const EdgeInsets.only(left: 8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.error,
                         shape: BoxShape.circle,
                       ),
                     ),
                 ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
                 item.body,
-                style: GoogleFonts.outfit(fontSize: 12, color: Colors.black54),
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  height: 1.4,
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),

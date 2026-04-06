@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:parkwise/core/theme/theme_provider.dart';
+
 
 class AppPreferencesScreen extends StatefulWidget {
   const AppPreferencesScreen({super.key});
@@ -13,30 +16,30 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
   bool _pushNotifications = true;
   bool _emailUpdates = false;
   bool _biometricAuth = false;
-  ThemeMode _themeMode = ThemeMode.system; // Local state only
 
-  String _getThemeName(ThemeMode mode) {
+  String _getThemeName(AppThemeMode mode) {
     switch (mode) {
-      case ThemeMode.light:
+      case AppThemeMode.light:
         return 'Light Mode';
-      case ThemeMode.dark:
+      case AppThemeMode.dark:
         return 'Dark Mode';
-      case ThemeMode.system:
+      case AppThemeMode.system:
         return 'System Default';
     }
   }
 
   void _showThemeSelector(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        // Use a StatefulBuilder to update the sheet UI when selection changes
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
+        return Consumer<ThemeProvider>(
+          builder: (context, provider, child) {
             return Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
@@ -48,30 +51,30 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
                     style: GoogleFonts.outfit(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 16),
                   _buildThemeOption(
                     context,
-                    ThemeMode.light,
+                    AppThemeMode.light,
                     'Light Mode',
                     Icons.light_mode,
-                    setSheetState,
+                    provider,
                   ),
                   _buildThemeOption(
                     context,
-                    ThemeMode.dark,
+                    AppThemeMode.dark,
                     'Dark Mode',
                     Icons.dark_mode,
-                    setSheetState,
+                    provider,
                   ),
                   _buildThemeOption(
                     context,
-                    ThemeMode.system,
+                    AppThemeMode.system,
                     'System Default',
                     Icons.settings_brightness,
-                    setSheetState,
+                    provider,
                   ),
                 ],
               ),
@@ -84,88 +87,66 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
 
   Widget _buildThemeOption(
     BuildContext context,
-    ThemeMode mode,
+    AppThemeMode mode,
     String title,
     IconData icon,
-    StateSetter setSheetState,
+    ThemeProvider provider,
   ) {
-    final isSelected = _themeMode == mode;
+    final isSelected = provider.appThemeMode == mode;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return GestureDetector(
       onTap: () {
-        // Update local state to show selection, but don't change app theme
-        setState(() {
-          _themeMode = mode;
-        });
-        setSheetState(() {}); // Update the bottom sheet
-
-        // Show "Coming Soon" message if not Light
-        if (mode == ThemeMode.dark || mode == ThemeMode.system) {
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '$title is coming soon! Keeping light mode for now.',
-                style: GoogleFonts.outfit(),
-              ),
-              backgroundColor: Colors.black,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-
-        // Close the sheet after a short delay or immediately
+        provider.setTheme(mode);
         Navigator.pop(context);
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.black : Colors.grey.shade50,
+          color: isSelected ? colorScheme.primary : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(16),
-          border: isSelected ? null : Border.all(color: Colors.grey.shade200),
+          border: isSelected ? null : Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
         ),
         child: Row(
           children: [
-            Icon(icon, color: isSelected ? Colors.white : Colors.black),
+            Icon(
+              icon, 
+              color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
+            ),
             const SizedBox(width: 16),
             Text(
               title,
               style: GoogleFonts.outfit(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: isSelected ? Colors.white : Colors.black,
+                color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
               ),
             ),
             const Spacer(),
             if (isSelected)
-              const Icon(Icons.check_circle, color: Colors.white, size: 20),
+              Icon(Icons.check_circle, color: colorScheme.onPrimary, size: 20),
           ],
         ),
       ),
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
-    const isDark = false; // Forced light mode
-    const textColor = Colors.black;
-    final subTextColor = Colors.grey.shade500;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
         title: Text(
           'App Preferences',
           style: GoogleFonts.outfit(
-            color: Colors.black,
+            color: colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -174,50 +155,44 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            _buildSectionHeader('NOTIFICATIONS'),
+            _buildSectionHeader(context, 'NOTIFICATIONS'),
             _buildSwitchTile(
+              context,
               title: 'Push Notifications',
               subtitle: 'Receive parking alerts & offers',
               value: _pushNotifications,
               onChanged: (v) => setState(() => _pushNotifications = v),
-              textColor: textColor,
-              subTextColor: subTextColor,
-              isDark: isDark,
             ),
             _buildSwitchTile(
+              context,
               title: 'Email Updates',
               subtitle: 'Weekly summary & promotions',
               value: _emailUpdates,
               onChanged: (v) => setState(() => _emailUpdates = v),
-              textColor: textColor,
-              subTextColor: subTextColor,
-              isDark: isDark,
             ),
             const SizedBox(height: 32),
-            _buildSectionHeader('APPEARANCE'),
+            _buildSectionHeader(context, 'APPEARANCE'),
             _buildSelectionTile(
+              context,
               title: 'App Theme',
-              subtitle: _getThemeName(_themeMode),
+              subtitle: _getThemeName(themeProvider.appThemeMode),
               icon: Icons.brightness_6_outlined,
               onTap: () => _showThemeSelector(context),
-              textColor: textColor,
-              subTextColor: subTextColor,
-              isDark: isDark,
             ),
+
             const SizedBox(height: 32),
-            _buildSectionHeader('SECURITY'),
+            _buildSectionHeader(context, 'SECURITY'),
             _buildSwitchTile(
+              context,
               title: 'Biometric Authentication',
               subtitle: 'Use FaceID/Fingerprint to login',
               value: _biometricAuth,
               onChanged: (v) => setState(() => _biometricAuth = v),
-              textColor: textColor,
-              subTextColor: subTextColor,
-              isDark: isDark,
             ),
             const SizedBox(height: 32),
-            _buildSectionHeader('DATA & STORAGE'),
+            _buildSectionHeader(context, 'DATA & STORAGE'),
             _buildActionTile(
+              context,
               title: 'Clear Cache',
               subtitle: 'Free up local storage space',
               icon: Icons.cleaning_services_outlined,
@@ -226,9 +201,6 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
                   const SnackBar(content: Text('Cache cleared successfully')),
                 );
               },
-              textColor: textColor,
-              subTextColor: subTextColor,
-              isDark: isDark,
             ),
           ],
         ),
@@ -236,7 +208,8 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+
+  Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Align(
@@ -246,7 +219,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
           style: GoogleFonts.outfit(
             fontSize: 12,
             fontWeight: FontWeight.bold,
-            color: Colors.grey.shade400,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             letterSpacing: 1.2,
           ),
         ),
@@ -254,22 +227,22 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
     );
   }
 
-  Widget _buildSwitchTile({
+  Widget _buildSwitchTile(
+    BuildContext context, {
     required String title,
     required String subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
-    required Color textColor,
-    required Color subTextColor,
-    required bool isDark,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -289,43 +262,46 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: textColor,
+                  color: colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: GoogleFonts.outfit(fontSize: 12, color: subTextColor),
+                style: GoogleFonts.outfit(
+                  fontSize: 12, 
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: Colors.black,
+            // Colors are handled by global SwitchThemeData in app_theme.dart
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSelectionTile({
+  Widget _buildSelectionTile(
+    BuildContext context, {
     required String title,
     required String subtitle,
     required IconData icon,
     required VoidCallback onTap,
-    required Color textColor,
-    required Color subTextColor,
-    required bool isDark,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade100),
+          border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.02),
@@ -336,7 +312,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
         ),
         child: Row(
           children: [
-            Icon(icon, color: textColor),
+            Icon(icon, color: colorScheme.primary),
             const SizedBox(width: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -346,13 +322,16 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: textColor,
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: GoogleFonts.outfit(fontSize: 12, color: subTextColor),
+                  style: GoogleFonts.outfit(
+                    fontSize: 12, 
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -360,7 +339,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
             Icon(
               Icons.arrow_forward_ios_rounded,
               size: 16,
-              color: Colors.grey.shade400,
+              color: colorScheme.onSurfaceVariant,
             ),
           ],
         ),
@@ -368,23 +347,23 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
     );
   }
 
-  Widget _buildActionTile({
+  Widget _buildActionTile(
+    BuildContext context, {
     required String title,
     required String subtitle,
     required IconData icon,
     required VoidCallback onTap,
-    required Color textColor,
-    required Color subTextColor,
-    required bool isDark,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade100),
+          border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.02),
@@ -395,7 +374,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
         ),
         child: Row(
           children: [
-            Icon(icon, color: textColor),
+            Icon(icon, color: colorScheme.onSurface),
             const SizedBox(width: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -405,13 +384,16 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: textColor,
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: GoogleFonts.outfit(fontSize: 12, color: subTextColor),
+                  style: GoogleFonts.outfit(
+                    fontSize: 12, 
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),

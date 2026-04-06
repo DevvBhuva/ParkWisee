@@ -59,8 +59,11 @@ class _VehicleDetailsDialogState extends State<VehicleDetailsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -74,7 +77,7 @@ class _VehicleDetailsDialogState extends State<VehicleDetailsDialog> {
                 style: GoogleFonts.outfit(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 24),
@@ -85,15 +88,7 @@ class _VehicleDetailsDialogState extends State<VehicleDetailsDialog> {
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) return const SizedBox.shrink();
                   final vehicles = snapshot.data!;
-                  // Filter by type? "and type of vehicle is preselected".
-                  // If user selected "Car" slot, maybe filter only Cars?
-                  // User said "give option to use from saved vehicles if user select vehicle form there then this form will be disable".
-                  // I'll filter by widget.vehicleType if possible, or show all.
-                  // Let's filter to be helpful.
-                  final filteredVehicles =
-                      vehicles; // .where((v) => v.type == widget.vehicleType).toList();
-                  // Actually, strict filtering might hide relevant vehicles if types don't match exactly string-wise.
-                  // Let's show all for now or maybe just matching ones.
+                  final filteredVehicles = vehicles;
 
                   if (filteredVehicles.isEmpty) return const SizedBox.shrink();
 
@@ -101,15 +96,17 @@ class _VehicleDetailsDialogState extends State<VehicleDetailsDialog> {
                     margin: const EdgeInsets.only(bottom: 16),
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
+                      border: Border.all(color: colorScheme.outline),
                       borderRadius: BorderRadius.circular(12),
+                      color: colorScheme.surfaceContainer,
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String?>(
                         value: _selectedVehicleId,
+                        dropdownColor: colorScheme.surfaceContainer,
                         hint: Text(
                           'Select Saved Vehicle',
-                          style: GoogleFonts.outfit(color: Colors.grey),
+                          style: GoogleFonts.outfit(color: colorScheme.onSurfaceVariant),
                         ),
                         isExpanded: true,
                         items: [
@@ -152,11 +149,8 @@ class _VehicleDetailsDialogState extends State<VehicleDetailsDialog> {
                       enabled: false,
                       decoration: InputDecoration(
                         labelText: 'Vehicle Type',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
                         filled: true,
-                        fillColor: Colors.grey.shade100,
+                        fillColor: colorScheme.surfaceContainerHighest,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -168,13 +162,10 @@ class _VehicleDetailsDialogState extends State<VehicleDetailsDialog> {
                       decoration: InputDecoration(
                         labelText: 'Vehicle Model',
                         hintText: 'e.g. Swift, City',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
                         filled: true,
                         fillColor: _selectedVehicleId == null
-                            ? Colors.grey.shade50
-                            : Colors.grey.shade100,
+                            ? colorScheme.surfaceContainer
+                            : colorScheme.surfaceContainerHighest,
                       ),
                       validator: (val) =>
                           val == null || val.isEmpty ? 'Required' : null,
@@ -190,21 +181,13 @@ class _VehicleDetailsDialogState extends State<VehicleDetailsDialog> {
                       decoration: InputDecoration(
                         labelText: 'License Plate',
                         hintText: 'GJ 01 AB 1234',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
                         filled: true,
                         fillColor: _selectedVehicleId == null
-                            ? Colors.grey.shade50
-                            : Colors.grey.shade100,
+                            ? colorScheme.surfaceContainer
+                            : colorScheme.surfaceContainerHighest,
                       ),
                       validator: (val) {
                         if (val == null || val.isEmpty) return 'Required';
-                        // Flexible Regex:
-                        // State: 2 chars
-                        // District: 1-2 digits
-                        // Series: 1-3 chars (allowing flexible per user request "x or xx")
-                        // Number: 4 digits
                         final regex = RegExp(
                           r'^[A-Z]{2} [0-9]{1,2} [A-Z]{1,3} [0-9]{4}$',
                         );

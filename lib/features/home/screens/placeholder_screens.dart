@@ -6,10 +6,15 @@ class MyBookingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: Text(
         'My Bookings',
-        style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold),
+        style: GoogleFonts.outfit(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: colorScheme.onSurface,
+        ),
       ),
     );
   }
@@ -20,10 +25,15 @@ class NavigationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: Text(
         'Navigation',
-        style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold),
+        style: GoogleFonts.outfit(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: colorScheme.onSurface,
+        ),
       ),
     );
   }

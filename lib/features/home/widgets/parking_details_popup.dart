@@ -44,6 +44,9 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return StreamBuilder<DocumentSnapshot>(
       stream: _parkingStream,
       builder: (context, snapshot) {
@@ -51,14 +54,9 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
 
         if (snapshot.hasData && snapshot.data!.exists) {
           try {
-            // Update the parking object with new data
             displayParking = ParkingSpot.fromFirestore(snapshot.data!);
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            }
           } catch (e) {
-            debugPrint('Error creating favorite: $e');
-            // Fallback to widget.parking
+            debugPrint('Error refetching parking: $e');
           }
         }
 
@@ -66,11 +64,11 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
 
         return Container(
           height: MediaQuery.of(context).size.height * 0.85,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(28),
+              topRight: Radius.circular(28),
             ),
           ),
           child: Column(
@@ -80,15 +78,15 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
               Stack(
                 children: [
                   SizedBox(
-                    height: 200,
+                    height: 220,
                     width: double.infinity,
                     child: ClipRRect(
                       borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(24),
-                        topRight: Radius.circular(24),
+                        topLeft: Radius.circular(28),
+                        topRight: Radius.circular(28),
                       ),
                       child: Image.asset(
-                        'assets/images/parking_aerial.jpg', // Placeholder
+                        'assets/images/parking_aerial.jpg',
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -101,11 +99,22 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                       onTap: () => Navigator.pop(context),
                       child: Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
+                        decoration: BoxDecoration(
+                          color: colorScheme.surface.withValues(alpha: 0.9),
                           shape: BoxShape.circle,
+                          boxShadow: theme.brightness == Brightness.light
+                              ? [
+                                  BoxShadow(
+                                    color: colorScheme.shadow,
+                                    blurRadius: 8,
+                                  ),
+                                ]
+                              : null,
+                          border: theme.brightness == Brightness.dark
+                              ? Border.all(color: colorScheme.outline)
+                              : null,
                         ),
-                        child: const Icon(Icons.close, size: 20),
+                        child: Icon(Icons.close, size: 20, color: colorScheme.onSurface),
                       ),
                     ),
                   ),
@@ -129,31 +138,32 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                               style: GoogleFonts.outfit(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.green.shade50,
+                              color: colorScheme.secondaryContainer,
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               children: [
-                                const Icon(
-                                  Icons.star,
-                                  size: 16,
-                                  color: Colors.green,
+                                Icon(
+                                  Icons.star_rounded,
+                                  size: 18,
+                                  color: colorScheme.onSecondaryContainer,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   displayParking.rating.toString(),
                                   style: GoogleFonts.outfit(
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.green.shade700,
+                                    color: colorScheme.onSecondaryContainer,
                                   ),
                                 ),
                               ],
@@ -161,13 +171,21 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        displayParking.address,
-                        style: GoogleFonts.outfit(
-                          fontSize: 14,
-                          color: Colors.grey,
-                        ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on_outlined, size: 14, color: colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              displayParking.address,
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 24),
@@ -178,6 +196,7 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                         style: GoogleFonts.outfit(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -189,18 +208,20 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                           if (facility.isEmpty) return const SizedBox.shrink();
                           return Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
+                              horizontal: 14,
+                              vertical: 10,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(8),
+                              color: colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: colorScheme.outline.withValues(alpha: 0.5)),
                             ),
                             child: Text(
                               facility,
                               style: GoogleFonts.outfit(
-                                fontSize: 12,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w500,
+                                color: colorScheme.onSurfaceVariant,
                               ),
                             ),
                           );
@@ -215,6 +236,7 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                         style: GoogleFonts.outfit(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -222,19 +244,13 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                       if (vehicles.isEmpty)
                         Text(
                           'No pricing info available',
-                          style: GoogleFonts.outfit(color: Colors.grey),
+                          style: GoogleFonts.outfit(color: colorScheme.onSurfaceVariant),
                         ),
 
-                      // Filter out vehicles with 0 slots
-                      ...vehicles.entries.where((e) => e.value.slots > 0).map((
-                        entry,
-                      ) {
+                      ...vehicles.entries.where((e) => e.value.slots > 0).map((entry) {
                         final type = entry.key;
                         final data = entry.value;
                         final isSelected = _selectedVehicleKey == type;
-
-                        // "if user selects vehicle then green colour appears"
-                        final activeColor = const Color(0xFF4ADE80);
 
                         return GestureDetector(
                           onTap: () {
@@ -243,32 +259,37 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                                 _selectedVehicleKey = null;
                               } else {
                                 _selectedVehicleKey = type;
-                                // Force rebuild of slider state via Key
                               }
                             });
                           },
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
-                            curve: Curves
-                                .easeInOut, // "make rest of txt visible in ease"
+                            curve: Curves.easeInOut,
                             margin: const EdgeInsets.only(bottom: 12),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 20,
-                              vertical: 16,
+                              vertical: 18,
                             ),
                             decoration: BoxDecoration(
-                              color: isSelected ? activeColor : Colors.white,
+                              color: isSelected ? colorScheme.secondaryContainer : colorScheme.surface,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: isSelected
-                                    ? activeColor
-                                    : Colors.grey.shade200,
+                                color: isSelected ? colorScheme.secondary : colorScheme.outlineVariant,
+                                width: isSelected ? 2 : 1,
                               ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: colorScheme.secondary.withValues(alpha: 0.1),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ]
+                                  : [],
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                // 1. Vehicle Type (Left)
                                 Expanded(
                                   flex: 3,
                                   child: Text(
@@ -278,12 +299,10 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                                     style: GoogleFonts.outfit(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
-                                      color: Colors.black, // Always black
+                                      color: isSelected ? colorScheme.onSecondaryContainer : colorScheme.onSurface,
                                     ),
                                   ),
                                 ),
-
-                                // 2. Number of Slots (Middle)
                                 Expanded(
                                   flex: 4,
                                   child: Center(
@@ -295,18 +314,14 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                                             style: GoogleFonts.outfit(
                                               fontSize: 14,
                                               fontWeight: FontWeight.bold,
-                                              color: isSelected
-                                                  ? Colors.black
-                                                  : const Color(
-                                                      0xFF16A34A,
-                                                    ), // Dynamic color
+                                              color: isSelected ? colorScheme.onSecondaryContainer : colorScheme.secondary,
                                             ),
                                           ),
                                           TextSpan(
-                                            text: 'slots',
+                                            text: 'slots available',
                                             style: GoogleFonts.outfit(
                                               fontSize: 14,
-                                              color: Colors.black54,
+                                              color: isSelected ? colorScheme.onSecondaryContainer.withValues(alpha: 0.7) : colorScheme.onSurfaceVariant,
                                             ),
                                           ),
                                         ],
@@ -314,8 +329,6 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                                     ),
                                   ),
                                 ),
-
-                                // 3. Price (Right)
                                 Expanded(
                                   flex: 3,
                                   child: Align(
@@ -325,7 +338,7 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                                       style: GoogleFonts.outfit(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 18,
-                                        color: Colors.black,
+                                        color: isSelected ? colorScheme.onSecondaryContainer : colorScheme.onSurface,
                                       ),
                                     ),
                                   ),
@@ -336,27 +349,30 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                         );
                       }),
 
-                      const SizedBox(height: 80), // Space for bottom slider
+                      const SizedBox(height: 100),
                     ],
                   ),
                 ),
               ),
 
-              // Slide Action Button (Show only if vehicle selected)
+              // Slide Action Button
               if (_selectedVehicleKey != null &&
                   vehicles.containsKey(_selectedVehicleKey) &&
                   vehicles[_selectedVehicleKey]!.slots > 0)
                 Container(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, -5),
-                      ),
-                    ],
+                    color: colorScheme.surface,
+                    border: Border(top: BorderSide(color: colorScheme.outline)),
+                    boxShadow: theme.brightness == Brightness.light
+                      ? [
+                          BoxShadow(
+                            color: colorScheme.shadow,
+                            blurRadius: 20,
+                            offset: const Offset(0, -5),
+                          ),
+                        ]
+                      : null,
                   ),
                   child: SafeArea(
                     child: _SlideToBookButton(
@@ -400,80 +416,79 @@ class _SlideToBookButton extends StatefulWidget {
 class _SlideToBookButtonState extends State<_SlideToBookButton> {
   double _dragValue = 0.0;
   bool _isCompleted = false;
-  final double _height = 60.0;
-  final double _knobWidth = 60.0;
+  final double _height = 64.0;
+  final double _knobWidth = 56.0;
 
   @override
   Widget build(BuildContext context) {
-    // Interpolate Color: Black -> Green
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final Color bgColor = Color.lerp(
-      Colors.black,
-      const Color(0xFF4ADE80),
+      colorScheme.secondaryContainer,
+      colorScheme.secondary,
       _dragValue,
     )!;
-    // Interpolate Text Color: White -> Black
-    final Color textColor = Color.lerp(Colors.white, Colors.black, _dragValue)!;
+
+    final Color textColor = Color.lerp(
+      colorScheme.onSecondaryContainer,
+      colorScheme.onSecondary,
+      _dragValue,
+    )!;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final double maxWidth = constraints.maxWidth;
-        final double maxDrag = maxWidth - _knobWidth;
+        final double maxDrag = maxWidth - _knobWidth - 8;
 
         return Container(
           height: _height,
+          padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: bgColor,
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(32),
           ),
           child: Stack(
             alignment: Alignment.centerLeft,
             children: [
-              // Text
               Center(
-                child: Text(
-                  _isCompleted ? 'Book Slot' : 'Slide to proceed',
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
+                child: Opacity(
+                  opacity: 1.0 - (_dragValue * 0.5),
+                  child: Text(
+                    _isCompleted ? 'Booking...' : 'Slide to Book Spot',
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
                   ),
                 ),
               ),
 
-              // Draggable Knob
               Positioned(
-                left: _dragValue * maxDrag,
+                left: 4 + (_dragValue * maxDrag),
                 child: GestureDetector(
                   onHorizontalDragUpdate: (details) {
                     if (_isCompleted) return;
-
                     double delta = details.primaryDelta ?? 0;
                     double currentPos = _dragValue * maxDrag;
                     double newPos = currentPos + delta;
-
-                    // Clamp
-                    double newDragValue = (newPos / maxDrag).clamp(0.0, 1.0);
-
                     setState(() {
-                      _dragValue = newDragValue;
+                      _dragValue = (newPos / maxDrag).clamp(0.0, 1.0);
                     });
                   },
                   onHorizontalDragEnd: (details) {
                     if (_isCompleted) return;
 
-                    if (_dragValue > 0.6) {
-                      // Complete action
+                    if (_dragValue > 0.7) {
                       setState(() {
                         _dragValue = 1.0;
                         _isCompleted = true;
                       });
-                      // Small delay before triggering navigation to show completed state
                       Future.delayed(const Duration(milliseconds: 200), () {
                         widget.onSlideCompleted();
-                        // Reset after navigation returns?
-                        // If we want to reset:
                         if (mounted) {
-                          Future.delayed(const Duration(milliseconds: 500), () {
+                          Future.delayed(const Duration(milliseconds: 1000), () {
                             if (mounted) {
                               setState(() {
                                 _dragValue = 0.0;
@@ -484,7 +499,6 @@ class _SlideToBookButtonState extends State<_SlideToBookButton> {
                         }
                       });
                     } else {
-                      // Spring back
                       setState(() {
                         _dragValue = 0.0;
                       });
@@ -492,18 +506,27 @@ class _SlideToBookButtonState extends State<_SlideToBookButton> {
                   },
                   child: Container(
                     width: _knobWidth,
-                    height: _height,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                    height: _height - 8,
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface,
                       shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(color: Colors.black12, blurRadius: 5),
-                      ],
+                      boxShadow: theme.brightness == Brightness.light
+                        ? [
+                            BoxShadow(
+                              color: colorScheme.shadow,
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                      border: theme.brightness == Brightness.dark
+                        ? Border.all(color: colorScheme.outline)
+                        : null,
                     ),
-                    child: const Icon(
-                      Icons.arrow_forward_ios_rounded, // Stemless arrow
-                      color: Colors.black,
-                      size: 20,
+                    child: Icon(
+                      _isCompleted ? Icons.check_rounded : Icons.arrow_forward_rounded,
+                      color: _isCompleted ? Colors.green : colorScheme.secondary,
+                      size: 24,
                     ),
                   ),
                 ),

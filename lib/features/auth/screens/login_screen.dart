@@ -143,12 +143,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 32),
                 Card(
-                  color: const Color(0xFFFAFAFA),
-                  elevation: 8,
-                  shadowColor: Colors.black.withValues(alpha: 0.1),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(24.0),
                     child: Form(
@@ -161,7 +155,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             decoration: const InputDecoration(
                               labelText: 'Email Address',
                               prefixIcon: Icon(Icons.email_outlined),
-                              border: OutlineInputBorder(),
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -172,7 +165,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             decoration: const InputDecoration(
                               labelText: 'Password',
                               prefixIcon: Icon(Icons.lock_outline),
-                              border: OutlineInputBorder(),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -322,15 +314,18 @@ class _SocialButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: colorScheme.outline),
           borderRadius: BorderRadius.circular(16),
-          color: Colors.white,
+          color: colorScheme.surfaceContainer,
         ),
         child: SizedBox(height: 28, width: 28, child: Center(child: child)),
       ),

@@ -6,7 +6,13 @@ import 'package:parkwise/features/auth/screens/welcome_screen.dart';
 import 'package:parkwise/features/home/screens/home_screen.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:parkwise/core/theme/theme_provider.dart';
 import 'package:parkwise/features/notifications/services/local_notification_service.dart';
+import 'package:parkwise/features/navigation/providers/map_provider.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,9 +24,18 @@ void main() async {
 
     // Initialize System Notifications
     await LocalNotificationService().initialize();
+
+    // Set Mapbox Access Token Globally (v2.18.0+)
+    String mapboxToken = dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
+    MapboxOptions.setAccessToken(mapboxToken);
   } catch (e) {
-    debugPrint("Firebase/Notification Initialization failed: $e");
+    debugPrint("Firebase/Notification/Mapbox Initialization failed: $e");
   }
+
+  // Initialize SharedPreferences for Theme Persistence
+  final prefs = await SharedPreferences.getInstance();
+
+
 
   // Check if user is already logged in
   Widget initialScreen = const WelcomeScreen();
@@ -28,8 +43,18 @@ void main() async {
     initialScreen = const HomeScreen();
   }
 
-  runApp(ParkWiseApp(initialScreen: initialScreen));
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider(prefs)),
+        ChangeNotifierProvider(create: (_) => MapProvider()),
+      ],
+      child: ParkWiseApp(initialScreen: initialScreen),
+    ),
+  );
 }
+
+
 
 class ParkWiseApp extends StatelessWidget {
   final Widget initialScreen;
@@ -37,11 +62,29 @@ class ParkWiseApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return MaterialApp(
       title: 'ParkWise',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeProvider.themeMode,
+      builder: (context, child) {
+        final brightness = MediaQuery.platformBrightnessOf(context);
+        final bool isDark = themeProvider.themeMode == ThemeMode.dark || 
+                          (themeProvider.themeMode == ThemeMode.system && brightness == Brightness.dark);
+
+        return AnimatedTheme(
+          data: isDark ? AppTheme.darkTheme : AppTheme.lightTheme,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+          child: child!,
+        );
+      },
       home: initialScreen,
     );
   }
+
 }
+

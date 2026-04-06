@@ -139,6 +139,26 @@ class BookingFirestoreService {
         });
   }
 
+  /// Get detailed stream of bookings for a specific spot and vehicle type
+  Stream<List<Booking>> getActiveBookingsForSpot(
+    String parkingSpotId,
+    String vehicleType,
+  ) {
+    return _firestore
+        .collection('parkings')
+        .doc(parkingSpotId)
+        .collection('bookings')
+        .where('vehicleId', isEqualTo: vehicleType)
+        .where('status', whereIn: ['booked', 'confirmed'])
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => Booking.fromMap(doc.data()))
+              .toList();
+        });
+  }
+
+
   Stream<List<Booking>> getBookingsStream(String userId) {
     return _firestore
         .collection('users')
@@ -153,120 +173,5 @@ class BookingFirestoreService {
         });
   }
 
-  /// Checks for expired bookings and releases their slots.
-  /// ensuring the availability count is correct.
-  Future<void> checkAndReleaseExpiredBookings(String userId) async {
-    try {
-      final now = DateTime.now();
-      final userBookingsRef = _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('bookings');
 
-      // Get active bookings (check both 'booked' and 'confirmed')
-      final snapshot = await userBookingsRef
-          .where('status', whereIn: ['booked', 'confirmed'])
-          .get();
-
-      for (var doc in snapshot.docs) {
-        final booking = Booking.fromMap(doc.data());
-        // Parse end time (assuming standard ISO format or similar stored in booking)
-        // If booking.endTime is String "HH:mm", we need date.
-        // Assuming booking has a full DateTime or we rely on 'date' + 'endTime'.
-        // For safety in this environment, let's rely on createdAt + duration if available,
-        // or just the field if it's a full ISO string.
-        // Based on previous files, booking might not have a full timestamp for end.
-        // Let's assume we can try to parse.
-
-        if (booking.endTime.isBefore(now)) {
-          debugPrint(
-            "DEBUG: Expiring booking ${booking.id} (EndTime: ${booking.endTime})",
-          );
-          await _releaseSlotForBooking(booking);
-        }
-      }
-    } catch (e) {
-      debugPrint("Error cleaning up bookings: $e");
-    }
-  }
-
-  /// Checks for expired bookings in a specific parking spot and releases them.
-  /// This handles bookings from ALL users for this spot.
-  Future<void> checkAndReleaseExpiredBookingsForParking(
-    String parkingId,
-  ) async {
-    try {
-      final now = DateTime.now();
-      final parkingBookingsRef = _firestore
-          .collection('parkings')
-          .doc(parkingId)
-          .collection('bookings');
-
-      // Get active bookings for this parking
-      // We rely on 'status' being 'booked' or 'confirmed'
-      final snapshot = await parkingBookingsRef
-          .where('status', whereIn: ['booked', 'confirmed'])
-          .get();
-
-      for (var doc in snapshot.docs) {
-        // We might not have the full booking object if it was saved partially,
-        // but let's assume Booking.fromMap works or we parse manually.
-        final data = doc.data();
-        // Check endTime
-        DateTime? endTime;
-        if (data['endTime'] is Timestamp) {
-          endTime = (data['endTime'] as Timestamp).toDate();
-        }
-
-        if (endTime != null && endTime.isBefore(now)) {
-          // Need to construct a Booking object to pass to _releaseSlotForBooking
-          // Or just call release logic directly.
-          // Constructing Booking is safer if we want to reuse _releaseSlotForBooking
-          // provided all fields are there.
-          try {
-            final booking = Booking.fromMap(data);
-            debugPrint(
-              "DEBUG: Global cleanup - Expiring booking ${booking.id}",
-            );
-            await _releaseSlotForBooking(booking);
-          } catch (e) {
-            debugPrint("Error parsing booking for cleanup: $e");
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint("Error cleaning up parking bookings: $e");
-    }
-  }
-
-  Future<void> _releaseSlotForBooking(Booking booking) async {
-    final parkingRef = _firestore
-        .collection('parkings')
-        .doc(booking.parkingSpotId);
-    final bookingRef = _firestore
-        .collection('users')
-        .doc(booking.userId)
-        .collection('bookings')
-        .doc(booking.id);
-    final parkingBookingRef = _firestore
-        .collection('parkings')
-        .doc(booking.parkingSpotId)
-        .collection('bookings')
-        .doc(booking.id);
-
-    try {
-      await _firestore.runTransaction((transaction) async {
-        final parkingDoc = await transaction.get(parkingRef);
-        if (!parkingDoc.exists) return;
-
-        // Update booking status only. Do NOT increment slots in DB.
-        transaction.update(bookingRef, {'status': 'completed'});
-        // Also update the booking in the parking's subcollection to keep it in sync
-        transaction.update(parkingBookingRef, {'status': 'completed'});
-      });
-      debugPrint("DEBUG: Released slot for ${booking.id}");
-    } catch (e) {
-      debugPrint("Failed to release slot: $e");
-    }
-  }
 }
