@@ -20,4 +20,15 @@ class LocationService {
           return snapshot.docs.map((doc) => Area.fromMap(doc.data())).toList();
         });
   }
+
+  /// Fetches all sub-areas across all cities in a single pass.
+  /// Uses collectionGroup to query all 'areas' subcollections at once.
+  Stream<List<Area>> getAllAreas() {
+    return _firestore.collectionGroup('areas').snapshots().map((snapshot) {
+      final areas =
+          snapshot.docs.map((doc) => Area.fromMap(doc.data())).toList();
+      areas.sort((a, b) => a.name.compareTo(b.name));
+      return areas;
+    });
+  }
 }

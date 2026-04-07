@@ -1,15 +1,14 @@
 import 'dart:math' as math;
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class CircularDurationSlider extends StatefulWidget {
   final double value;
   final double min;
   final double max;
   final ValueChanged<double> onChanged;
-  final Color activeColor;
-  final Color inactiveColor;
+  final Color? activeColor;
+  final Color? inactiveColor;
 
   const CircularDurationSlider({
     super.key,
@@ -17,8 +16,8 @@ class CircularDurationSlider extends StatefulWidget {
     this.min = 0,
     this.max = 24,
     required this.onChanged,
-    this.activeColor = const Color(0xFF00C853),
-    this.inactiveColor = const Color(0xFFE0E0E0),
+    this.activeColor,
+    this.inactiveColor,
   });
 
   @override
@@ -86,41 +85,44 @@ class _CircularDurationSliderState extends State<CircularDurationSlider> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onPanUpdate: (details) {
-        RenderBox box = context.findRenderObject() as RenderBox;
-        _handlePan(box.globalToLocal(details.globalPosition), box.size);
-      },
-      onPanDown: (details) {
-        RenderBox box = context.findRenderObject() as RenderBox;
-        _handlePan(box.globalToLocal(details.globalPosition), box.size);
-      },
-      child: CustomPaint(
-        size: const Size(200, 200),
-        painter: _CircularSliderPainter(
-          value: widget.value,
-          min: widget.min,
-          max: widget.max,
-          activeColor: widget.activeColor,
-          inactiveColor: widget.inactiveColor,
-        ),
-        child: SizedBox(
-          width: 200,
-          height: 200,
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  _formatDuration(widget.value),
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: widget.activeColor,
-                  ),
+    return RepaintBoundary(
+      child: GestureDetector(
+        onPanUpdate: (details) {
+          RenderBox box = context.findRenderObject() as RenderBox;
+          _handlePan(box.globalToLocal(details.globalPosition), box.size);
+        },
+        onPanDown: (details) {
+          RenderBox box = context.findRenderObject() as RenderBox;
+          _handlePan(box.globalToLocal(details.globalPosition), box.size);
+        },
+        child: RepaintBoundary(
+          child: CustomPaint(
+            size: const Size(200, 200),
+            painter: _CircularSliderPainter(
+              value: widget.value,
+              min: widget.min,
+              max: widget.max,
+              activeColor: widget.activeColor ?? Theme.of(context).colorScheme.primary,
+              inactiveColor: widget.inactiveColor ?? Theme.of(context).colorScheme.outlineVariant,
+            ),
+            child: SizedBox(
+              width: 200,
+              height: 200,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _formatDuration(widget.value),
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: widget.activeColor ?? Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -128,6 +130,7 @@ class _CircularDurationSliderState extends State<CircularDurationSlider> {
     );
   }
 }
+
 
 class _CircularSliderPainter extends CustomPainter {
   final double value;

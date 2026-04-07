@@ -214,19 +214,16 @@ class _BookingScreenState extends State<BookingScreen> {
                                   return Theme(
                                     data: Theme.of(context).copyWith(
                                       timePickerTheme: TimePickerThemeData(
-                                        backgroundColor: Colors.white,
-                                        dialHandColor: Colors.green,
-                                        dialBackgroundColor:
-                                            Colors.grey.shade100,
-                                        hourMinuteTextColor:
-                                            Colors.green.shade800,
-                                        dayPeriodTextColor:
-                                            Colors.green.shade800,
-                                        entryModeIconColor: Colors.green,
+                                        backgroundColor: colorScheme.surface,
+                                        dialHandColor: colorScheme.primary,
+                                        dialBackgroundColor: colorScheme.surfaceContainerHighest,
+                                        hourMinuteTextColor: colorScheme.primary,
+                                        dayPeriodTextColor: colorScheme.primary,
+                                        entryModeIconColor: colorScheme.primary,
                                       ),
                                       textButtonTheme: TextButtonThemeData(
                                         style: TextButton.styleFrom(
-                                          foregroundColor: Colors.green,
+                                          foregroundColor: colorScheme.primary,
                                         ),
                                       ),
                                     ),
@@ -311,7 +308,6 @@ class _BookingScreenState extends State<BookingScreen> {
                                 setState(() => _duration = val);
                                 setSheetState(() {});
                               },
-                              activeColor: const Color(0xFF00C853),
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -322,17 +318,15 @@ class _BookingScreenState extends State<BookingScreen> {
                             children: [
                               Text(
                                 'Total Price',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 16,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                               Text(
                                 '\u20B9${totalPrice.toStringAsFixed(0)}',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 28,
+                                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF00C853),
+                                  color: Theme.of(context).colorScheme.secondary,
                                 ),
                               ),
                             ],
@@ -784,16 +778,16 @@ class _BookingScreenState extends State<BookingScreen> {
                 margin: const EdgeInsets.only(right: 14),
                 padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 10),
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.green : Colors.white,
+                  color: isSelected ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected ? Colors.green : Colors.grey.shade300,
+                    color: isSelected ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.outline,
                     width: 1.5,
                   ),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: Colors.green.withValues(alpha: 0.3),
+                            color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 6),
                           ),
@@ -812,13 +806,13 @@ class _BookingScreenState extends State<BookingScreen> {
                       Icon(
                         Icons.layers_outlined,
                         size: 16,
-                        color: isSelected ? Colors.white : Colors.grey.shade600,
+                        color: isSelected ? Theme.of(context).colorScheme.onSecondary : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         'Floor $level',
-                        style: GoogleFonts.outfit(
-                          color: isSelected ? Colors.white : Colors.black87,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: isSelected ? Theme.of(context).colorScheme.onSecondary : Theme.of(context).colorScheme.onSurface,
                           fontWeight:
                               isSelected ? FontWeight.bold : FontWeight.w600,
                           fontSize: 15,
@@ -855,18 +849,18 @@ class _BookingScreenState extends State<BookingScreen> {
               builder: (context, child) {
                 return Theme(
                   data: Theme.of(context).copyWith(
-                    colorScheme: ColorScheme.light(
-                      primary: Colors.green.shade700,
-                      onPrimary: Colors.white,
-                      onSurface: Colors.black,
+                    colorScheme: Theme.of(context).colorScheme.copyWith(
+                      primary: Theme.of(context).colorScheme.primary,
+                      onPrimary: Theme.of(context).colorScheme.onPrimary,
+                      onSurface: Theme.of(context).colorScheme.onSurface,
                     ),
                     textButtonTheme: TextButtonThemeData(
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.green.shade700,
+                        foregroundColor: Theme.of(context).colorScheme.primary,
                       ),
                     ),
-                    dialogTheme: const DialogThemeData(
-                      backgroundColor: Colors.white,
+                    dialogTheme: DialogThemeData(
+                      backgroundColor: Theme.of(context).colorScheme.surface,
                     ),
                   ),
                   child: child!,
@@ -899,20 +893,20 @@ class _BookingScreenState extends State<BookingScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.green.shade50 : Colors.transparent,
+            color: isSelected ? Theme.of(context).colorScheme.secondaryContainer : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? Colors.green.shade200 : Colors.grey.shade200,
+              color: isSelected ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.outline,
               width: isSelected ? 1.5 : 1,
             ),
           ),
           child: Center(
             child: Text(
               label,
-              style: GoogleFonts.outfit(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: isSelected
-                    ? Colors.green.shade700
-                    : Colors.grey.shade600,
+                    ? Theme.of(context).colorScheme.onSecondaryContainer
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w600,
               ),
             ),

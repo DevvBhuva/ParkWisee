@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:parkwise/features/profile/models/profile_models.dart';
 import 'package:parkwise/features/profile/services/location_firestore_service.dart';
 
@@ -66,24 +65,28 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           'Delete Location?',
-          style: GoogleFonts.outfit(
-            color: Colors.black,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         content: Text(
           'Are you sure you want to remove this location?',
-          style: GoogleFonts.outfit(color: Colors.grey.shade600),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Cancel',
-              style: GoogleFonts.outfit(color: Colors.grey),
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Theme.of(context).colorScheme.outline,
+              ),
             ),
           ),
           TextButton(
@@ -91,7 +94,12 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
               _firestoreService.deleteLocation(id);
               Navigator.pop(context);
             },
-            child: Text('Delete', style: GoogleFonts.outfit(color: Colors.red)),
+            child: Text(
+              'Delete',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
           ),
         ],
       ),
@@ -104,16 +112,16 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
       appBar: AppBar(
         title: Text(
           'Saved Locations',
-          style: GoogleFonts.outfit(
-            color: Colors.black,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: StreamBuilder<List<SavedLocation>>(
         stream: _locationsStream,
         builder: (context, snapshot) {
@@ -138,14 +146,15 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
                   const SizedBox(height: 16),
                   Text(
                     "No saved locations",
-                    style: GoogleFonts.outfit(
-                      color: Colors.grey.shade500,
-                      fontSize: 18,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   Text(
                     "Tap + to add one",
-                    style: GoogleFonts.outfit(color: Colors.grey.shade400),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
                   ),
                 ],
               ),
@@ -165,21 +174,22 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showLocationDialog(),
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.white),
+        child: Icon(Icons.add, color: Theme.of(context).colorScheme.onPrimary),
       ),
     );
   }
 
   Widget _buildLocationCard(SavedLocation loc) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: colorScheme.shadow.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -193,10 +203,10 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(15),
               ),
-              child: Icon(Icons.location_on, color: Colors.redAccent),
+              child: Icon(Icons.location_on, color: colorScheme.primary),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -205,17 +215,16 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
                 children: [
                   Text(
                     loc.name,
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     loc.address,
-                    style: GoogleFonts.outfit(
-                      color: Colors.grey.shade600,
-                      fontSize: 13,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -227,7 +236,7 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
                   icon: Icon(
                     Icons.edit_outlined,
                     size: 20,
-                    color: Colors.grey.shade600,
+                    color: colorScheme.onSurfaceVariant,
                   ),
                   onPressed: () => _showLocationDialog(location: loc),
                 ),
@@ -235,7 +244,7 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
                   icon: Icon(
                     Icons.delete_outline,
                     size: 20,
-                    color: Colors.red.shade400,
+                    color: colorScheme.error,
                   ),
                   onPressed: () => _confirmDelete(loc.id),
                 ),
@@ -287,7 +296,7 @@ class _LocationDialogState extends State<_LocationDialog> {
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: mediaQuery.size.height * 0.9),
@@ -300,10 +309,9 @@ class _LocationDialogState extends State<_LocationDialog> {
             children: [
               Text(
                 widget.location == null ? 'Add Location' : 'Edit Location',
-                style: GoogleFonts.outfit(
-                  fontSize: 20,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -327,11 +335,13 @@ class _LocationDialogState extends State<_LocationDialog> {
                       _addressController.text.isNotEmpty))
                 Padding(
                   padding: const EdgeInsets.only(top: 16.0),
-                  child: Text(
-                    'Both fields are required.',
-                    style: GoogleFonts.outfit(color: Colors.red, fontSize: 13),
-                    textAlign: TextAlign.center,
+                child: Text(
+                  'Both fields are required.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
                   ),
+                  textAlign: TextAlign.center,
+                ),
                 ),
 
               const SizedBox(height: 32),
@@ -342,7 +352,9 @@ class _LocationDialogState extends State<_LocationDialog> {
                       onPressed: () => Navigator.pop(context),
                       child: Text(
                         'Cancel',
-                        style: GoogleFonts.outfit(color: Colors.grey),
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
                       ),
                     ),
                   ),
@@ -359,8 +371,9 @@ class _LocationDialogState extends State<_LocationDialog> {
                             }
                           : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        disabledBackgroundColor: Colors.grey.shade300,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        disabledBackgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -368,9 +381,9 @@ class _LocationDialogState extends State<_LocationDialog> {
                       ),
                       child: Text(
                         'Save',
-                        style: GoogleFonts.outfit(
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
                     ),
@@ -397,19 +410,29 @@ class _LocationDialogState extends State<_LocationDialog> {
       children: [
         Text(
           label,
-          style: GoogleFonts.outfit(color: Colors.black87, fontSize: 12),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           onChanged: (_) => _validate(),
-          style: GoogleFonts.outfit(color: Colors.black),
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.outfit(color: Colors.grey.shade500),
-            prefixIcon: Icon(icon, color: Colors.grey.shade600, size: 20),
+            hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            prefixIcon: Icon(
+              icon,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              size: 20,
+            ),
             filled: true,
-            fillColor: Colors.grey.shade100,
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 14,
@@ -424,7 +447,10 @@ class _LocationDialogState extends State<_LocationDialog> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.black, width: 1),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+                width: 1,
+              ),
             ),
           ),
         ),

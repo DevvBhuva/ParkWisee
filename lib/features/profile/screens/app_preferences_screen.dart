@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:parkwise/core/theme/theme_provider.dart';
 
@@ -48,8 +47,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
                 children: [
                   Text(
                     'Select Theme',
-                    style: GoogleFonts.outfit(
-                      fontSize: 20,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
                     ),
@@ -117,8 +115,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
             const SizedBox(width: 16),
             Text(
               title,
-              style: GoogleFonts.outfit(
-                fontSize: 16,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
               ),
@@ -145,7 +142,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
         elevation: 0,
         title: Text(
           'App Preferences',
-          style: GoogleFonts.outfit(
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
             color: colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
@@ -216,10 +213,9 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
         alignment: Alignment.centerLeft,
         child: Text(
           title,
-          style: GoogleFonts.outfit(
-            fontSize: 12,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
             fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            color: Theme.of(context).colorScheme.primary,
             letterSpacing: 1.2,
           ),
         ),
@@ -245,7 +241,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
         border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: colorScheme.shadow.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -259,8 +255,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
             children: [
               Text(
                 title,
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: colorScheme.onSurface,
                 ),
@@ -268,8 +263,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: GoogleFonts.outfit(
-                  fontSize: 12, 
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
@@ -304,7 +298,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
           border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
+              color: colorScheme.shadow.withValues(alpha: 0.02),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -319,8 +313,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: colorScheme.onSurface,
                   ),
@@ -328,8 +321,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: GoogleFonts.outfit(
-                    fontSize: 12, 
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -366,7 +358,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
           border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
+              color: colorScheme.shadow.withValues(alpha: 0.02),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -381,8 +373,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: colorScheme.onSurface,
                   ),
@@ -390,8 +381,7 @@ class _AppPreferencesScreenState extends State<AppPreferencesScreen> {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: GoogleFonts.outfit(
-                    fontSize: 12, 
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:parkwise/features/profile/models/profile_models.dart';
 import 'package:parkwise/features/profile/services/vehicle_firestore_service.dart';
 
@@ -72,24 +71,28 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           'Delete Vehicle?',
-          style: GoogleFonts.outfit(
-            color: Colors.black,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         content: Text(
           'Are you sure you want to remove this vehicle?',
-          style: GoogleFonts.outfit(color: Colors.grey.shade600),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Cancel',
-              style: GoogleFonts.outfit(color: Colors.grey),
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Theme.of(context).colorScheme.outline,
+              ),
             ),
           ),
           TextButton(
@@ -97,7 +100,12 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
               _firestoreService.deleteVehicle(id);
               Navigator.pop(context);
             },
-            child: Text('Delete', style: GoogleFonts.outfit(color: Colors.red)),
+            child: Text(
+              'Delete',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
           ),
         ],
       ),
@@ -110,16 +118,16 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
       appBar: AppBar(
         title: Text(
           'My Vehicles',
-          style: GoogleFonts.outfit(
-            color: Colors.black,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: StreamBuilder<List<Vehicle>>(
         stream: _vehiclesStream,
         builder: (context, snapshot) {
@@ -145,14 +153,15 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
                   const SizedBox(height: 16),
                   Text(
                     "No vehicles found",
-                    style: GoogleFonts.outfit(
-                      color: Colors.grey.shade500,
-                      fontSize: 18,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   Text(
                     "Tap + to add one",
-                    style: GoogleFonts.outfit(color: Colors.grey.shade400),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
                   ),
                 ],
               ),
@@ -172,21 +181,22 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showVehicleDialog(),
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.white),
+        child: Icon(Icons.add, color: Theme.of(context).colorScheme.onPrimary),
       ),
     );
   }
 
   Widget _buildVehicleCard(Vehicle vehicle) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: colorScheme.shadow.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -201,12 +211,12 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(15),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.directions_car_filled,
-                color: Colors.black87,
+                color: colorScheme.primary,
               ),
             ),
             const SizedBox(width: 16),
@@ -217,10 +227,9 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
                 children: [
                   Text(
                     vehicle.name,
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: colorScheme.onSurface,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -236,9 +245,8 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
                       _buildTag(vehicle.type),
                       Text(
                         vehicle.licensePlate,
-                        style: GoogleFonts.outfit(
-                          fontSize: 13,
-                          color: Colors.grey.shade600,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -255,7 +263,7 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
                   icon: Icon(
                     Icons.edit_outlined,
                     size: 20,
-                    color: Colors.grey.shade600,
+                    color: colorScheme.onSurfaceVariant,
                   ),
                   onPressed: () => _showVehicleDialog(vehicle: vehicle),
                 ),
@@ -263,7 +271,7 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
                   icon: Icon(
                     Icons.delete_outline,
                     size: 20,
-                    color: Colors.red.shade400,
+                    color: colorScheme.error,
                   ),
                   onPressed: () => _confirmDelete(vehicle.id),
                 ),
@@ -279,15 +287,14 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         text.toUpperCase(),
-        style: GoogleFonts.outfit(
-          fontSize: 10,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
           fontWeight: FontWeight.bold,
-          color: Colors.grey.shade700,
+          color: Theme.of(context).colorScheme.primary,
         ),
       ),
     );
@@ -339,7 +346,7 @@ class _VehicleDialogState extends State<_VehicleDialog> {
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      backgroundColor: Colors.white, // White Background
+      backgroundColor: Theme.of(context).colorScheme.surface, // Theme Background
       insetPadding: const EdgeInsets.all(20),
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -354,10 +361,9 @@ class _VehicleDialogState extends State<_VehicleDialog> {
             children: [
               Text(
                 widget.vehicle == null ? 'Add Vehicle' : 'Edit Vehicle',
-                style: GoogleFonts.outfit(
-                  fontSize: 20,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Colors.black, // Dark text
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 24),
@@ -389,7 +395,9 @@ class _VehicleDialogState extends State<_VehicleDialog> {
                       onPressed: () => Navigator.pop(context),
                       child: Text(
                         'Cancel',
-                        style: GoogleFonts.outfit(color: Colors.grey),
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
                       ),
                     ),
                   ),
@@ -406,8 +414,9 @@ class _VehicleDialogState extends State<_VehicleDialog> {
                             }
                           : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black, // Dark button
-                        disabledBackgroundColor: Colors.grey.shade300,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        disabledBackgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -415,9 +424,9 @@ class _VehicleDialogState extends State<_VehicleDialog> {
                       ),
                       child: Text(
                         'Save',
-                        style: GoogleFonts.outfit(
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
                     ),
@@ -446,19 +455,29 @@ class _VehicleDialogState extends State<_VehicleDialog> {
       children: [
         Text(
           label,
-          style: GoogleFonts.outfit(color: Colors.black87, fontSize: 12),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           onChanged: (_) => _validate(),
-          style: GoogleFonts.outfit(color: Colors.black),
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.outfit(color: Colors.grey.shade500),
-            prefixIcon: Icon(icon, color: Colors.grey.shade600, size: 20),
+            hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            prefixIcon: Icon(
+              icon,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              size: 20,
+            ),
             filled: true,
-            fillColor: Colors.grey.shade100,
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 14,
@@ -473,7 +492,10 @@ class _VehicleDialogState extends State<_VehicleDialog> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.black, width: 1),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+                width: 1,
+              ),
             ),
           ),
         ),

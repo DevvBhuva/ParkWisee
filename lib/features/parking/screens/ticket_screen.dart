@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:parkwise/features/parking/models/booking_model.dart';
@@ -32,12 +31,11 @@ class _TicketScreenState extends State<TicketScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
       appBar: AppBar(
         title: Text(
           'Receipt',
-          style: GoogleFonts.outfit(
-            color: Colors.black,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -45,7 +43,7 @@ class _TicketScreenState extends State<TicketScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black),
+          icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () {
             Navigator.popUntil(context, (route) => route.isFirst);
           },
@@ -58,11 +56,11 @@ class _TicketScreenState extends State<TicketScreen> {
             // RECEIPT CARD
             Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFFDFBF7), // Creamy/White background
+                color: Theme.of(context).colorScheme.surface, // Creamy/White background
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.05),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -78,19 +76,17 @@ class _TicketScreenState extends State<TicketScreen> {
                         // Parking Name
                         Text(
                           widget.booking.spotName,
-                          style: GoogleFonts.outfit(
-                            fontSize: 22,
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           widget.booking.spotAddress,
-                          style: GoogleFonts.outfit(
-                            fontSize: 14,
-                            color: Colors.grey,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                           textAlign: TextAlign.center,
                           maxLines: 2,
@@ -118,7 +114,7 @@ class _TicketScreenState extends State<TicketScreen> {
                           'Price Paid',
                           '\u20B9${widget.booking.totalPrice.toStringAsFixed(0)}',
                           isBold: true,
-                          color: Colors.green.shade700,
+                          color: Theme.of(context).colorScheme.secondary,
                         ),
 
                         const Divider(height: 30),
@@ -145,9 +141,16 @@ class _TicketScreenState extends State<TicketScreen> {
                     ),
                   ),
 
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: CustomPaint(
+                      size: const Size(double.infinity, 1),
+                      painter: DashedLinePainter(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 30),
-
-                  const SizedBox(height: 20),
 
                   // QR Code Section
                   Center(
@@ -158,13 +161,20 @@ class _TicketScreenState extends State<TicketScreen> {
                           version: QrVersions.auto,
                           size: 160.0,
                           backgroundColor: Colors.white,
+                          eyeStyle: QrEyeStyle(
+                            eyeShape: QrEyeShape.square,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          dataModuleStyle: QrDataModuleStyle(
+                            dataModuleShape: QrDataModuleShape.square,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         Text(
                           'Scan this QR code at entry/exit',
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            color: Colors.grey.shade500,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -194,17 +204,15 @@ class _TicketScreenState extends State<TicketScreen> {
         children: [
           Text(
             label,
-            style: GoogleFonts.outfit(
-              color: Colors.grey.shade600,
-              fontSize: 14,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
           Text(
             value,
-            style: GoogleFonts.outfit(
-              fontSize: 16,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              color: color ?? Colors.black87,
+              color: color ?? Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ],
@@ -214,11 +222,14 @@ class _TicketScreenState extends State<TicketScreen> {
 }
 
 class DashedLinePainter extends CustomPainter {
+  final Color color;
+  DashedLinePainter({required this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
     double dashWidth = 5, dashSpace = 3, startX = 0;
     final paint = Paint()
-      ..color = Colors.grey.shade300
+      ..color = color
       ..strokeWidth = 1;
 
     while (startX < size.width) {

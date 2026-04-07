@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:parkwise/features/parking/models/parking_spot.dart';
 import 'package:parkwise/features/profile/models/profile_models.dart';
-import 'package:parkwise/features/profile/services/payment_firestore_service.dart';
+import 'package:parkwise/features/payment/services/payment_firestore_service.dart';
 import 'package:parkwise/features/parking/screens/ticket_screen.dart';
 import 'package:parkwise/features/home/widgets/slide_to_book_button.dart';
 import 'package:parkwise/features/parking/models/booking_model.dart';
@@ -14,7 +13,7 @@ import 'package:parkwise/features/parking/services/local_booking_service.dart';
 import 'package:parkwise/features/notifications/services/notification_service.dart';
 import 'package:parkwise/features/notifications/models/notification_model.dart';
 import 'package:parkwise/features/notifications/services/local_notification_service.dart';
-import 'package:parkwise/features/parking/services/cashfree_service.dart'; // Added
+import 'package:parkwise/features/payment/services/cashfree_service.dart'; // Added
 import 'dart:convert';
 
 class BookingSummaryScreen extends StatefulWidget {
@@ -165,7 +164,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -175,8 +174,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
         ),
         title: Text(
           'Booking Summary',
-          style: GoogleFonts.outfit(
-            color: Colors.black,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -202,17 +200,15 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                           children: [
                             Text(
                               widget.spot.name,
-                              style: GoogleFonts.outfit(
-                                fontSize: 18,
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               widget.spot.address,
-                              style: GoogleFonts.outfit(
-                                fontSize: 14,
-                                color: Colors.grey,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -226,16 +222,15 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.green.shade50,
+                          color: Theme.of(context).colorScheme.secondaryContainer,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green.shade200),
+                          border: Border.all(color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.2)),
                         ),
                         child: Text(
                           'Slot P${widget.slotId + 1}',
-                          style: GoogleFonts.outfit(
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: Colors.green.shade700,
-                            fontSize: 16,
+                            color: Theme.of(context).colorScheme.onSecondaryContainer,
                           ),
                         ),
                       ),
@@ -274,17 +269,15 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                     children: [
                       Text(
                         'Total to Pay',
-                        style: GoogleFonts.outfit(
-                          fontSize: 18,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
                         '\u20B9${widget.totalPrice.toStringAsFixed(0)}',
-                        style: GoogleFonts.outfit(
-                          fontSize: 24,
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Colors.green.shade700,
+                          color: Theme.of(context).colorScheme.secondary,
                         ),
                       ),
                     ],
@@ -324,13 +317,13 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: isSelected
-                                  ? Colors.green
+                                  ? Theme.of(context).colorScheme.secondary
                                   : Colors.transparent,
                               width: 2,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.05),
+                                color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.05),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -364,33 +357,32 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                                   children: [
                                     Text(
                                       method.category,
-                                      style: GoogleFonts.outfit(
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 16,
                                       ),
                                     ),
                                     if (method.maskedNumber.isNotEmpty)
                                       Text(
                                         method.maskedNumber,
-                                        style: GoogleFonts.outfit(
-                                          color: Colors.grey,
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                                         ),
                                       ),
                                     if (method.upiId != null &&
                                         method.upiId!.isNotEmpty)
                                       Text(
                                         method.upiId!,
-                                        style: GoogleFonts.outfit(
-                                          color: Colors.grey,
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                                         ),
                                       ),
                                   ],
                                 ),
                               ),
                               if (isSelected)
-                                const Icon(
+                                Icon(
                                   Icons.check_circle,
-                                  color: Colors.green,
+                                  color: Theme.of(context).colorScheme.secondary,
                                 ),
                             ],
                           ),
@@ -423,9 +415,9 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                             const SizedBox(width: 8),
                             Text(
                               'Add Payment Method',
-                              style: GoogleFonts.outfit(
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black54,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -466,14 +458,13 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          'Select Payment Method',
-                          style: GoogleFonts.outfit(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade600,
+                          Text(
+                            'Select Payment Method',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   )
@@ -539,10 +530,9 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         title,
-        style: GoogleFonts.outfit(
-          fontSize: 16,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
           fontWeight: FontWeight.w600,
-          color: Colors.grey.shade700,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
     );
@@ -554,7 +544,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
       borderRadius: BorderRadius.circular(16),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.05),
+          color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.05),
           blurRadius: 10,
           offset: const Offset(0, 4),
         ),
@@ -566,12 +556,14 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: GoogleFonts.outfit(color: Colors.grey.shade600)),
+        Text(label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        )),
         Text(
           value,
-          style: GoogleFonts.outfit(
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],

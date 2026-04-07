@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:parkwise/features/profile/models/profile_models.dart';
-import 'package:parkwise/features/profile/services/payment_firestore_service.dart';
+import 'package:parkwise/features/payment/services/payment_firestore_service.dart';
 
 class PaymentMethodsScreen extends StatefulWidget {
   const PaymentMethodsScreen({super.key});

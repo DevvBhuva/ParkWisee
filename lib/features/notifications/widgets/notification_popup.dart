@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:parkwise/features/notifications/models/notification_model.dart';
+import 'package:parkwise/features/notifications/widgets/notification_item_card.dart';
 
 class NotificationPopup extends StatelessWidget {
   final List<NotificationModel> notifications;
@@ -100,8 +101,9 @@ class NotificationPopup extends StatelessWidget {
                   separatorBuilder: (context, index) =>
                       Divider(height: 32, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
                   itemBuilder: (context, index) {
-                    final item = notifications[index];
-                    return _buildNotificationItem(context, item);
+                    return NotificationItemCard(
+                      notification: notifications[index],
+                    );
                   },
                 ),
               ),
@@ -136,90 +138,6 @@ class NotificationPopup extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildNotificationItem(BuildContext context, NotificationModel item) {
-    final colorScheme = Theme.of(context).colorScheme;
-    IconData icon;
-    Color iconColor;
-
-    switch (item.type) {
-      case NotificationType.confirmation:
-        icon = Icons.check_circle_rounded;
-        iconColor = colorScheme.primary;
-        break;
-      case NotificationType.reminder:
-        icon = Icons.alarm_rounded;
-        iconColor = colorScheme.secondary;
-        break;
-      case NotificationType.critical:
-        icon = Icons.warning_amber_rounded;
-        iconColor = colorScheme.tertiary;
-        break;
-      case NotificationType.expired:
-        icon = Icons.remove_circle_rounded;
-        iconColor = colorScheme.error;
-        break;
-      default:
-        icon = Icons.info_outline_rounded;
-        iconColor = colorScheme.onSurfaceVariant;
-    }
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: iconColor, size: 22),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      item.title,
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                  if (!item.isRead)
-                    Container(
-                      width: 8,
-                      height: 8,
-                      margin: const EdgeInsets.only(left: 8),
-                      decoration: BoxDecoration(
-                        color: colorScheme.error,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                item.body,
-                style: GoogleFonts.outfit(
-                  fontSize: 14,
-                  height: 1.4,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:adaptive_theme/adaptive_theme.dart';
 
 import 'package:parkwise/features/auth/services/auth_service.dart';
 
 import 'package:parkwise/features/profile/services/user_firestore_service.dart';
 import 'package:parkwise/features/profile/screens/my_vehicles_screen.dart';
-import 'package:parkwise/features/profile/screens/payment_methods_screen.dart';
+import 'package:parkwise/features/payment/screens/payment_methods_screen.dart';
 import 'package:parkwise/features/profile/screens/saved_locations_screen.dart';
 import 'package:parkwise/features/profile/screens/app_preferences_screen.dart';
 import 'package:parkwise/features/profile/screens/help_support_screen.dart';
@@ -13,6 +13,7 @@ import 'package:parkwise/features/profile/screens/legal_privacy_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parkwise/features/auth/screens/login_screen.dart';
 import 'package:parkwise/features/profile/widgets/export_history_dialog.dart';
+import 'package:parkwise/core/widgets/page_animations.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -149,16 +150,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   title: Text(
                     _userName,
-                    style: GoogleFonts.outfit(
-                      fontSize: 20,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
                     ),
                   ),
                   subtitle: Text(
                     'Tap to edit details',
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
@@ -167,7 +166,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _nameController,
-                      style: GoogleFonts.outfit(color: colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.onSurface,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Full Name',
                         prefixIcon: Icon(
@@ -179,7 +180,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _phoneController,
-                      style: GoogleFonts.outfit(color: colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.onSurface,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Mobile Number',
                         prefixIcon: Icon(
@@ -205,9 +208,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               )
                             : Text(
                                 'Save Details',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 16,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
+                                  color: colorScheme.onPrimary,
                                 ),
                               ),
                       ),
@@ -218,15 +221,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
+
+            // Theme Toggle
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Appearance',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurfaceVariant,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SegmentedButton<AdaptiveThemeMode>(
+                      style: SegmentedButton.styleFrom(
+                        selectedBackgroundColor: colorScheme.primary,
+                        selectedForegroundColor: colorScheme.onPrimary,
+                      ),
+                      segments: const [
+                        ButtonSegment(
+                          value: AdaptiveThemeMode.light,
+                          icon: Icon(Icons.wb_sunny_outlined, size: 18),
+                          label: Text('Light'),
+                        ),
+                        ButtonSegment(
+                          value: AdaptiveThemeMode.system,
+                          icon: Icon(Icons.brightness_auto_outlined, size: 18),
+                          label: Text('Auto'),
+                        ),
+                        ButtonSegment(
+                          value: AdaptiveThemeMode.dark,
+                          icon: Icon(Icons.nightlight_outlined, size: 18),
+                          label: Text('Dark'),
+                        ),
+                      ],
+                      selected: {AdaptiveTheme.of(context).mode},
+                      onSelectionChanged: (Set<AdaptiveThemeMode> modes) {
+                        AdaptiveTheme.of(context).setThemeMode(modes.first);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
             _buildMenuItem(
               context,
               assetPath: 'assets/images/my_vehicle_logo.png',
               title: 'My Vehicles',
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const MyVehiclesScreen(),
+                FadeSlideRoute(
+                  page: const MyVehiclesScreen(),
                 ),
               ),
             ),
@@ -236,8 +289,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'Payment Methods',
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const PaymentMethodsScreen(),
+                FadeSlideRoute(
+                  page: const PaymentMethodsScreen(),
                 ),
               ),
             ),
@@ -247,8 +300,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'Saved Locations',
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const SavedLocationsScreen(),
+                FadeSlideRoute(
+                  page: const SavedLocationsScreen(),
                 ),
               ),
             ),
@@ -256,9 +309,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               context,
               assetPath: 'assets/images/export_parking_logo.png',
               title: 'Export Parking History',
-              onTap: () => showDialog(
+              onTap: () => showAnimatedDialog(
                 context: context,
-                builder: (context) => const ExportHistoryDialog(),
+                child: const ExportHistoryDialog(),
               ),
             ),
             _buildMenuItem(
@@ -267,8 +320,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'App Preferences',
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const AppPreferencesScreen(),
+                FadeSlideRoute(
+                  page: const AppPreferencesScreen(),
                 ),
               ),
             ),
@@ -278,8 +331,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'Help & Support',
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const HelpSupportScreen(),
+                FadeSlideRoute(
+                  page: const HelpSupportScreen(),
                 ),
               ),
             ),
@@ -289,8 +342,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'Legal & Privacy',
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const LegalPrivacyScreen(),
+                FadeSlideRoute(
+                  page: const LegalPrivacyScreen(),
                 ),
               ),
             ),
@@ -320,10 +373,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 child: Text(
                   'LOGOUT',
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.0,
+                    color: colorScheme.onErrorContainer,
                   ),
                 ),
               ),
@@ -370,8 +423,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           title: Text(
             title,
-            style: GoogleFonts.outfit(
-              fontSize: 16,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w500,
               color: colorScheme.onSurface,
             ),

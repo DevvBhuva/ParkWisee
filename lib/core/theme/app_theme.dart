@@ -43,6 +43,7 @@ class AppTheme {
           shadowColor: colorScheme.primary.withValues(alpha: 0.3),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          splashFactory: InkSparkle.splashFactory,
           textStyle: GoogleFonts.outfit(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -54,8 +55,9 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.primary,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          side: BorderSide(color: colorScheme.primary, width: 2),
+          side: BorderSide(color: colorScheme.outline, width: 1.5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          splashFactory: InkSparkle.splashFactory,
           textStyle: GoogleFonts.outfit(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -132,6 +134,17 @@ class AppTheme {
           color: colorScheme.onSurface,
         ),
       ),
+      
+      // Page Transitions
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: ZoomPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.windows: ZoomPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+        },
+      ),
     );
   }
 
@@ -174,6 +187,7 @@ class AppTheme {
           shadowColor: Colors.black.withValues(alpha: 0.5),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          splashFactory: InkSparkle.splashFactory,
           textStyle: GoogleFonts.outfit(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -185,8 +199,9 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.onSurface,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          side: BorderSide(color: colorScheme.outline, width: 2),
+          side: BorderSide(color: colorScheme.outline, width: 1.5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          splashFactory: InkSparkle.splashFactory,
           textStyle: GoogleFonts.outfit(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -264,6 +279,17 @@ class AppTheme {
           fontWeight: FontWeight.bold,
           color: colorScheme.onSurface,
         ),
+      ),
+
+      // Page Transitions
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: ZoomPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.windows: ZoomPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+        },
       ),
     );
   }

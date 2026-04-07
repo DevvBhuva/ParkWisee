@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class SlideToBookButton extends StatefulWidget {
   final VoidCallback onCompleted;
@@ -64,9 +63,9 @@ class _SlideToBookButtonState extends State<SlideToBookButton> {
         // User asked: "when arrow reached right... changes to green"
         // We can transition or just switch. Let's interpolate for a smooth feel.
         final bgColor = _isCompleted
-            ? const Color(0xFF00C853) // Success Green
-            : Color.lerp(Colors.black, const Color(0xFF00C853), _dragValue) ??
-                  Colors.black;
+            ? Theme.of(context).colorScheme.primary // Success Green -> Brand Primary
+            : Color.lerp(Theme.of(context).colorScheme.onSurface, Theme.of(context).colorScheme.primary, _dragValue) ??
+                  Theme.of(context).colorScheme.onSurface;
 
         return Container(
           height: _knobSize + (_padding * 2),
@@ -83,9 +82,8 @@ class _SlideToBookButtonState extends State<SlideToBookButton> {
                   opacity: 1.0 - _dragValue, // Fade out as we slide
                   child: Text(
                     widget.label, // "Slide to Book" (or customized)
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 16,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onPrimary,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.2,
                     ),
@@ -103,9 +101,8 @@ class _SlideToBookButtonState extends State<SlideToBookButton> {
                       const SizedBox(width: 8),
                       Text(
                         widget.completionLabel,
-                        style: GoogleFonts.outfit(
-                          color: Colors.white,
-                          fontSize: 16,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onPrimary,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.2,
                         ),
@@ -133,10 +130,10 @@ class _SlideToBookButtonState extends State<SlideToBookButton> {
                     ),
                     child: Center(
                       child: _isCompleted
-                          ? const Icon(Icons.check, color: Color(0xFF00C853))
-                          : const Icon(
+                          ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                          : Icon(
                               Icons.chevron_right,
-                              color: Colors.black,
+                              color: Theme.of(context).colorScheme.onSurface,
                               size: 28,
                             ),
                     ),

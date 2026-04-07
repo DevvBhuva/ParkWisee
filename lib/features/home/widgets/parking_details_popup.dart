@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:parkwise/features/parking/models/parking_spot.dart';
 
 import 'package:parkwise/features/parking/screens/booking_screen.dart';
@@ -135,8 +134,7 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                           Expanded(
                             child: Text(
                               displayParking.name,
-                              style: GoogleFonts.outfit(
-                                fontSize: 24,
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: colorScheme.onSurface,
                               ),
@@ -161,7 +159,7 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                                 const SizedBox(width: 4),
                                 Text(
                                   displayParking.rating.toString(),
-                                  style: GoogleFonts.outfit(
+                                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: colorScheme.onSecondaryContainer,
                                   ),
@@ -179,8 +177,7 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                           Expanded(
                             child: Text(
                               displayParking.address,
-                              style: GoogleFonts.outfit(
-                                fontSize: 14,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: colorScheme.onSurfaceVariant,
                               ),
                             ),
@@ -193,8 +190,7 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                       // Facilities
                       Text(
                         'Facilities',
-                        style: GoogleFonts.outfit(
-                          fontSize: 18,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colorScheme.onSurface,
                         ),
@@ -218,8 +214,7 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                             ),
                             child: Text(
                               facility,
-                              style: GoogleFonts.outfit(
-                                fontSize: 13,
+                              style: Theme.of(context).textTheme.labelMedium?.copyWith(
                                 fontWeight: FontWeight.w500,
                                 color: colorScheme.onSurfaceVariant,
                               ),
@@ -233,8 +228,7 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                       // Vehicle Selection
                       Text(
                         'Choose Vehicle Type',
-                        style: GoogleFonts.outfit(
-                          fontSize: 18,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colorScheme.onSurface,
                         ),
@@ -244,7 +238,9 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                       if (vehicles.isEmpty)
                         Text(
                           'No pricing info available',
-                          style: GoogleFonts.outfit(color: colorScheme.onSurfaceVariant),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
                         ),
 
                       ...vehicles.entries.where((e) => e.value.slots > 0).map((entry) {
@@ -296,9 +292,8 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                                     type.toUpperCase(),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.outfit(
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 16,
                                       color: isSelected ? colorScheme.onSecondaryContainer : colorScheme.onSurface,
                                     ),
                                   ),
@@ -311,16 +306,14 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                                         children: [
                                           TextSpan(
                                             text: '${data.slots} ',
-                                            style: GoogleFonts.outfit(
-                                              fontSize: 14,
+                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                               fontWeight: FontWeight.bold,
                                               color: isSelected ? colorScheme.onSecondaryContainer : colorScheme.secondary,
                                             ),
                                           ),
                                           TextSpan(
                                             text: 'slots available',
-                                            style: GoogleFonts.outfit(
-                                              fontSize: 14,
+                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                               color: isSelected ? colorScheme.onSecondaryContainer.withValues(alpha: 0.7) : colorScheme.onSurfaceVariant,
                                             ),
                                           ),
@@ -335,9 +328,8 @@ class _ParkingDetailsPopupState extends State<ParkingDetailsPopup> {
                                     alignment: Alignment.centerRight,
                                     child: Text(
                                       '\u20B9${data.price}/hr',
-                                      style: GoogleFonts.outfit(
+                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 18,
                                         color: isSelected ? colorScheme.onSecondaryContainer : colorScheme.onSurface,
                                       ),
                                     ),
@@ -456,8 +448,7 @@ class _SlideToBookButtonState extends State<_SlideToBookButton> {
                   opacity: 1.0 - (_dragValue * 0.5),
                   child: Text(
                     _isCompleted ? 'Booking...' : 'Slide to Book Spot',
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: textColor,
                     ),
@@ -525,7 +516,7 @@ class _SlideToBookButtonState extends State<_SlideToBookButton> {
                     ),
                     child: Icon(
                       _isCompleted ? Icons.check_rounded : Icons.arrow_forward_rounded,
-                      color: _isCompleted ? Colors.green : colorScheme.secondary,
+                      color: _isCompleted ? Theme.of(context).colorScheme.primary : colorScheme.secondary,
                       size: 24,
                     ),
                   ),
