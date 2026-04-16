@@ -12,11 +12,10 @@ import 'package:parkwise/features/navigation/providers/map_provider.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:provider/provider.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
-  
+
   // Get saved theme mode
   final savedThemeMode = await AdaptiveTheme.getThemeMode();
 
@@ -41,9 +40,7 @@ void main() async {
 
   runApp(
     MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => MapProvider()),
-      ],
+      providers: [ChangeNotifierProvider(create: (_) => MapProvider())],
       child: ParkWiseApp(
         initialScreen: initialScreen,
         savedThemeMode: savedThemeMode,
@@ -57,7 +54,7 @@ class ParkWiseApp extends StatelessWidget {
   final AdaptiveThemeMode? savedThemeMode;
 
   const ParkWiseApp({
-    super.key, 
+    super.key,
     required this.initialScreen,
     this.savedThemeMode,
   });
@@ -78,4 +75,4 @@ class ParkWiseApp extends StatelessWidget {
     );
   }
 }
-
+// test
